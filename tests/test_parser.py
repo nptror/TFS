@@ -142,3 +142,82 @@ def test_validation_is_pure():
     assert first == second
     assert len(data["lop"]) == 1
 
+
+def test_user_real_world_case():
+    raw_text = """Lớp 12C9 vắng 3
+Nhật Huy (P)
+Tuấn Huy (P)
+Duy Hải (K)
+12c11 vắng 1 phương thảo
+12C3 vắng Tuấn Anh(K),Minh Trí(P), Khánh Nguyên (K), Thanh Huy(P), Trung Nghĩa (P), Duy Thành (P)
+12c2 sĩ số40 văng 0
+Lớp: 12C17
+Sĩ số: 43
+Vắng: Trúc Vy, Mai Phương Uyên (P), Thu Hương (P), Bảo Khanh (T)
+12c8 vắng 0
+12c16
+v 1 lưu văn phát(p)
+12c19
+v:0
+Lớp 10c4 vắng thịnh (p)
+Dạ em gửi 10c6 ạ
+10c2 đủ ạ
+10C8 đi đủ ạ"""
+    config_classes = [
+        "10C2", "10C4", "10C5", "10C6", "10C10",
+        "12C2", "12C3", "12C8", "12C9", "12C11", "12C12", "12C16", "12C17", "12C18"
+    ]
+    parsed = parse_message(raw_text)
+    records = {r["ten_lop"]: r for r in parsed["lop"]}
+
+    # 10C2 báo đủ ạ -> vắng 0, không có học sinh Đủ Ạ
+    assert records["10C2"]["so_vang_khai_bao"] == 0
+    assert records["10C2"]["hoc_sinh"] == []
+
+    # 10C4 vắng thịnh (p) -> không bị dính "Dạ Em Gửi"
+    assert len(records["10C4"]["hoc_sinh"]) == 1
+    assert records["10C4"]["hoc_sinh"][0]["ten"] == "Thịnh"
+    assert records["10C4"]["hoc_sinh"][0]["loai"] == "P"
+
+    # 10C6 chỉ gửi "Dạ em gửi 10c6 ạ" -> không có học sinh tên Ạ
+    assert records["10C6"]["hoc_sinh"] == []
+
+    # 10C8 đi đủ ạ -> vắng 0
+    assert records["10C8"]["so_vang_khai_bao"] == 0
+    assert records["10C8"]["hoc_sinh"] == []
+
+    # 12C16 v 1 lưu văn phát(p) -> 1 vắng, tên Lưu Văn Phát (P), không có chữ V
+    assert records["12C16"]["so_vang_khai_bao"] == 1
+    assert records["12C16"]["hoc_sinh"] == [{"ten": "Lưu Văn Phát", "loai": "P"}]
+
+    # 12C19 v:0 -> vắng 0, không có học sinh tên V
+    assert records["12C19"]["so_vang_khai_bao"] == 0
+    assert records["12C19"]["hoc_sinh"] == []
+
+    # 12C17 -> sĩ số 43, 4 học sinh (Trúc Vy, Mai Phương Uyên, Thu Hương, Bảo Khanh)
+    assert records["12C17"]["si_so"] == 43
+    assert len(records["12C17"]["hoc_sinh"]) == 4
+    assert records["12C17"]["hoc_sinh"][3] == {"ten": "Bảo Khanh", "loai": None}
+
+    # Kiểm tra validate
+    result = validate(parsed, config_classes)
+    formatted = format_text(result["data"], "Sáng", date(2026, 10, 24), 1)
+
+    assert "10C2 Vắng  0" in formatted
+    assert "10C4 Vắng  1 Thịnh (P)" in formatted
+    assert "10C8 Vắng  0" in formatted
+    assert "12C16 Vắng  1 Lưu Văn Phát (P)" in formatted
+    assert "12C17 Vắng  4 Trúc Vy (?), Mai Phương Uyên (P), Thu Hương (P), Bảo Khanh (?)" in formatted
+    assert "12C19 Vắng  0" in formatted
+
+    # Cảnh báo không còn các cảnh báo sai/rác
+    warning_msgs = [f"{w.get('class_name')}: {w['message']}" for w in result["warnings"]]
+    for msg in warning_msgs:
+        assert "Đủ Ạ" not in msg
+        assert "Dạ Em Gửi" not in msg
+        assert ": Ạ" not in msg
+        assert "Đi Đủ Ạ" not in msg
+        assert "Chưa rõ P/K: V" not in msg
+        assert "Khai báo 0 vắng nhưng liệt kê 1 tên" not in msg
+
+
