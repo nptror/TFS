@@ -35,7 +35,7 @@ def run():
         assert "Chưa rõ P/K: Phương Thảo" in page.locator("#warning-list").inner_text()
         page.screenshot(path=str(OUT / "desktop.png"), full_page=True)
         page.get_by_role("button", name="Copy", exact=True).click()
-        expect(page.locator("#message")).to_have_text("Đã copy bản báo cáo.")
+        expect(page.locator("#message-text")).to_have_text("Đã copy bản báo cáo.")
         copied = page.evaluate("navigator.clipboard.readText()")
         assert copied.replace("\r\n", "\n") == page.locator("#output-text").input_value()
         original = page.locator("#output-text").input_value()

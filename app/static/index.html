@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,160 +8,993 @@
   <meta name="description" content="Chuẩn hóa tin nhắn báo vắng, kiểm tra sĩ số và xuất báo cáo Excel.">
   <title>Tổng hợp báo vắng</title>
   <style>
-    :root { color-scheme: light; --bg:#f4f6f3; --surface:#fff; --ink:#20352e; --muted:#617169; --line:#dce4dd; --green:#245c4f; --green-hover:#194638; --tint:#edf4ee; --yellow:#fff8df; --yellow-border:#e8d38a; --yellow-ink:#795715; --red:#a33730; --radius:12px; }
-    * { box-sizing:border-box; }
-    body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.6 "Segoe UI",Arial,sans-serif; }
-    button,input,select,textarea { font:inherit; }
-    button { cursor:pointer; }
-    button:disabled { cursor:not-allowed; opacity:.48; }
-    button,input,select,textarea,summary { -webkit-tap-highlight-color:transparent; }
-    :focus-visible { outline:3px solid #78a997; outline-offset:3px; }
-    [hidden] { display:none !important; }
-    .shell { width:min(1420px,100%); margin:auto; padding:0 32px; }
-    .topbar { background:var(--surface); border-bottom:1px solid var(--line); }
-    .topbar .shell { min-height:70px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
-    .brand { display:flex; gap:12px; align-items:center; font-size:17px; font-weight:700; }
-    .brand-mark { background:var(--green); color:#fff; width:34px; height:38px; border-radius:8px; display:grid; place-items:center; }
-    .brand-mark svg { width:22px; height:22px; }
-    .top-note { font-size:12px; color:var(--muted); }
-    main { padding-top:30px !important; padding-bottom:32px !important; }
-    .intro { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:26px; }
-    h1 { font-size:30px; line-height:1.3; letter-spacing:-.8px; margin:0 0 6px; font-weight:650; }
-    .intro p { color:var(--muted); margin:0; }
-    .shortcut { color:var(--muted); font-size:12px; white-space:nowrap; padding-bottom:3px; }
-    kbd { font:11px/1.4 "Segoe UI",sans-serif; border:1px solid #ccd6cf; border-bottom-width:2px; border-radius:4px; padding:3px 5px; background:white; color:#465c50; }
-    .workspace { display:grid; grid-template-columns:minmax(0,1fr) 228px minmax(0,1.14fr); gap:20px; align-items:start; }
-    .panel { border:1px solid var(--line); background:var(--surface); border-radius:var(--radius); overflow:hidden; min-width:0; }
-    .panel-header { padding:18px 20px 15px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
-    h2 { font-size:16px; line-height:1.4; margin:0; font-weight:650; }
-    .panel-header p { margin:3px 0 0; font-size:12px; color:var(--muted); }
-    .text-button { border:0; background:transparent; color:var(--green); font-size:12px; padding:7px 0 7px 7px; white-space:nowrap; font-weight:600; }
-    .text-button:hover { text-decoration:underline; }
-    .editor { display:block; border:0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); width:100%; min-height:420px; resize:vertical; padding:20px; line-height:1.85; font-size:14px; color:#2a3c32; background:white; tab-size:2; }
-    .editor:focus { outline:2px solid #7aab94; outline-offset:-2px; }
-    .editor::placeholder { color:#6d7a72; opacity:1; }
-    .result-editor { background:#fcfdfb; }
-    .editor-footer { display:flex; flex-wrap:wrap; align-items:center; gap:8px; justify-content:space-between; padding:11px 20px; font-size:11px; color:var(--muted); }
-    .legend { display:flex; gap:18px; padding:15px 2px 0; font-size:12px; color:var(--muted); flex-wrap:wrap; }
-    .legend b { color:var(--green); font-size:11px; background:#e7eee8; padding:2px 6px; border-radius:4px; margin-right:4px; }
-    .control-panel { padding:19px 18px; }
-    .control-panel h2 { margin-bottom:19px; }
-    fieldset { margin:0; padding:0; border:0; min-width:0; }
-    legend,.field-label { display:block; font-size:12px; font-weight:600; margin-bottom:7px; }
-    .session-fields { border-top:1px solid var(--line); padding-top:18px; display:grid; gap:13px; }
-    .field-row { display:grid; grid-template-columns:1fr 65px; gap:10px; }
-    .field { min-width:0; }
-    .field input,.field select { width:100%; min-width:0; height:41px; border:1px solid #cfd9d1; background:#fff; color:var(--ink); border-radius:7px; padding:0 10px; font-size:13px; }
-    .field input[type=date] { padding-right:7px; }
-    .day-label { font-size:11px; color:var(--muted); margin-top:5px; }
-    .actions { display:grid; gap:9px; margin-top:22px; }
-    .btn { display:flex; align-items:center; justify-content:center; gap:9px; border:1px solid #cdd8cf; border-radius:8px; min-height:42px; padding:10px 14px; background:#fff; color:var(--green); font-size:13px; font-weight:600; white-space:nowrap; transition:background .15s; }
-    .btn svg { width:16px; height:16px; flex-shrink:0; }
-    .btn:hover:not(:disabled) { background:var(--tint); }
-    .btn-primary { background:var(--green); border-color:var(--green); color:#fff; min-height:46px; font-size:14px; }
-    .btn-primary:hover:not(:disabled) { background:var(--green-hover); }
-    .btn-secondary { background:var(--tint); border-color:#d3e1d5; }
-    .action-divider { height:1px; background:var(--line); margin:6px 0; }
-    .button-hint, .edit-tip { color:var(--green); background:var(--tint); border-left:3px solid var(--green); border-radius:6px; font-size:12px; font-weight:600; line-height:1.5; }
-    .button-hint { margin:13px 0 0; padding:9px 11px; }
-    .edit-tip { padding:4px 9px; }
-    .result-editor:focus { outline:2px solid var(--green); outline-offset:-2px; }
-    .warning-list li[tabindex] { cursor:pointer; }
-    .warning-list li[tabindex]:hover, .warning-list li[tabindex]:focus-visible { background:#fff2c2; outline:none; }
-    .stats { display:flex; justify-content:space-between; gap:14px; padding:14px 20px; background:#f2f7f1; border-top:1px solid var(--line); }
-    .stat { font-size:11px; color:var(--muted); }
-    .stat strong { font-size:20px; line-height:1.3; color:var(--green); font-weight:600; display:block; font-variant-numeric:tabular-nums; }
-    .warning-panel { margin-top:16px; background:var(--yellow); border:1px solid var(--yellow-border); border-radius:var(--radius); padding:15px 17px; }
-    .warning-panel h2 { color:var(--yellow-ink); font-size:13px; display:flex; align-items:center; gap:8px; }
-    .warning-panel h2 svg { width:16px; height:16px; }
-    .warning-panel .badge { margin-left:auto; border-radius:4px; padding:0 6px; background:#f4e8b7; font-size:11px; }
-    .warning-list { list-style:none; padding:0; margin:11px 0 0; max-height:260px; overflow:auto; font-size:12px; color:#735922; }
-    .warning-list li { padding:9px 0 9px 10px; border-top:1px solid #eadeb8; border-left:3px solid var(--kind); overflow-wrap:anywhere; }
-    .w-error { --kind:#a33730; } .w-check { --kind:#b7791f; } .w-info { --kind:#2b6cb0; }
-    .warning-legend { display:flex; flex-wrap:wrap; gap:4px 14px; margin:10px 0 0; font-size:11px; color:var(--ink); }
-    .warning-legend span::before { content:''; display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--kind); margin-right:5px; }
-    .warning-tag { display:inline-block; font-size:10px; font-weight:700; color:var(--kind); border:1px solid var(--kind); border-radius:4px; padding:0 5px; margin-right:6px; }
-    .warning-list li:first-child { border-top:0; padding-top:0; }
-    .warning-list strong { font-weight:650; }
-    .warning-list pre { white-space:pre-wrap; font:inherit; background:#fffdf4; border-radius:4px; padding:7px 9px; margin:6px 0 0; }
-    .warning-empty { margin:10px 0 0; color:var(--muted); font-size:12px; }
-    .warning-panel.neutral { background:#f9fbf8; border-color:var(--line); }
-    .warning-panel.neutral h2 { color:var(--muted); }
-    .config { margin-top:24px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:14px 0; color:var(--muted); font-size:12px; }
-    .config summary { cursor:pointer; color:#435e4f; font-weight:600; }
-    .config p { margin:10px 0 0; }
-    .class-list { display:flex; flex-wrap:wrap; gap:7px; margin:12px 0; }
-    .class-list span { padding:3px 8px; border:1px solid var(--line); background:white; border-radius:5px; color:#4b6455; }
-    footer { font-size:11px; color:var(--muted); padding-top:16px; display:flex; justify-content:space-between; gap:12px; }
-    .message { padding:12px 16px; margin-bottom:18px; font-size:13px; border:1px solid #dec8c4; border-radius:8px; background:#fff2ef; color:var(--red); }
-    .message.success { color:var(--green); background:#eaf4eb; border-color:#c2d8c6; }
-    .stale-note { padding:8px 20px; background:#fff8df; border-bottom:1px solid #eadeb8; font-size:11px; color:var(--yellow-ink); }
-    .spinner { width:14px; height:14px; border:2px solid #ffffff66; border-top-color:#fff; border-radius:50%; animation:spin .8s linear infinite; }
-    @keyframes spin { to { transform:rotate(360deg); } }
-    @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }
-    @media (max-width:1100px) { .shell { padding:0 20px; } .workspace { gap:14px; grid-template-columns:minmax(0,1fr) 205px minmax(0,1.1fr); } .panel-header,.editor { padding:16px; } .control-panel { padding:17px 14px; } .panel-header { align-items:flex-start; flex-wrap:wrap; } }
-    @media (max-width:800px) { .workspace { grid-template-columns:1fr; gap:16px; } .intro { display:block; } .shortcut { margin-top:12px; } .editor { min-height:280px; } .control-panel { padding:20px; } .session-fields { grid-template-columns:1fr 1fr; align-items:start; } .mode-help { min-height:0; margin-bottom:16px; } .actions { grid-template-columns:1fr 1fr; margin-top:16px; } .action-divider { display:none; } .actions .btn-primary { grid-column:1/-1; } .control-panel h2 { margin-bottom:14px; } .top-note { display:none; } h1 { font-size:26px; } .intro p { font-size:13px; } footer { flex-direction:column; gap:3px; } }
-    @media (max-width:380px) { .shell { padding:0 14px; } .session-fields { grid-template-columns:1fr; } .stats { gap:8px; padding:12px 16px; } .panel-header { gap:2px; } }
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f3;
+      --surface: #fff;
+      --ink: #20352e;
+      --muted: #617169;
+      --line: #dce4dd;
+      --green: #245c4f;
+      --green-hover: #194638;
+      --tint: #edf4ee;
+      --yellow: #fff8df;
+      --yellow-border: #e8d38a;
+      --yellow-ink: #795715;
+      --red: #a33730;
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 15px/1.6 "Segoe UI", Arial, sans-serif;
+      zoom: 1.15;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: .48;
+    }
+
+    button,
+    input,
+    select,
+    textarea,
+    summary {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :focus-visible {
+      outline: 3px solid #78a997;
+      outline-offset: 3px;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    .shell {
+      width: min(1420px, 100%);
+      margin: auto;
+      padding: 0 32px;
+    }
+
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .topbar .shell {
+      min-height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .brand-mark {
+      background: var(--green);
+      color: #fff;
+      width: 34px;
+      height: 38px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+    }
+
+    .brand-mark svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .top-note {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    main {
+      padding-top: 30px !important;
+      padding-bottom: 32px !important;
+    }
+
+    .intro {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 26px;
+    }
+
+    h1 {
+      font-size: 30px;
+      line-height: 1.3;
+      letter-spacing: -.8px;
+      margin: 0 0 6px;
+      font-weight: 650;
+    }
+
+    .intro p {
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .shortcut {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      padding-bottom: 3px;
+    }
+
+    kbd {
+      font: 11px/1.4 "Segoe UI", sans-serif;
+      border: 1px solid #ccd6cf;
+      border-bottom-width: 2px;
+      border-radius: 4px;
+      padding: 3px 5px;
+      background: white;
+      color: #465c50;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 228px minmax(0, 1.14fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .panel-header {
+      padding: 18px 20px 15px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    h2 {
+      font-size: 16px;
+      line-height: 1.4;
+      margin: 0;
+      font-weight: 650;
+    }
+
+    .panel-header p {
+      margin: 3px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .text-button {
+      border: 0;
+      background: transparent;
+      color: var(--green);
+      font-size: 12px;
+      padding: 7px 0 7px 7px;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+
+    .text-button:hover {
+      text-decoration: underline;
+    }
+
+    .editor {
+      display: block;
+      border: 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      width: 100%;
+      min-height: 420px;
+      resize: vertical;
+      padding: 20px;
+      line-height: 1.85;
+      font-size: 14px;
+      color: #2a3c32;
+      background: white;
+      tab-size: 2;
+    }
+
+    .editor:focus {
+      outline: 2px solid #7aab94;
+      outline-offset: -2px;
+    }
+
+    .editor::placeholder {
+      color: #6d7a72;
+      opacity: 1;
+    }
+
+    .result-editor {
+      background: #fcfdfb;
+    }
+
+    .editor-footer {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      justify-content: space-between;
+      padding: 11px 20px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .legend {
+      display: flex;
+      gap: 18px;
+      padding: 15px 2px 0;
+      font-size: 12px;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+
+    .legend b {
+      color: var(--green);
+      font-size: 11px;
+      background: #e7eee8;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-right: 4px;
+    }
+
+    .control-panel {
+      padding: 19px 18px;
+    }
+
+    .control-panel h2 {
+      margin-bottom: 19px;
+    }
+
+    fieldset {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      min-width: 0;
+    }
+
+    legend,
+    .field-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 7px;
+    }
+
+    .session-fields {
+      border-top: 1px solid var(--line);
+      padding-top: 18px;
+      display: grid;
+      gap: 13px;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 65px;
+      gap: 10px;
+    }
+
+    .field {
+      min-width: 0;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      min-width: 0;
+      height: 41px;
+      border: 1px solid #cfd9d1;
+      background: #fff;
+      color: var(--ink);
+      border-radius: 7px;
+      padding: 0 10px;
+      font-size: 13px;
+    }
+
+    .field input[type=date] {
+      padding-right: 7px;
+    }
+
+    .day-label {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 5px;
+    }
+
+    .actions {
+      display: grid;
+      gap: 9px;
+      margin-top: 22px;
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      border: 1px solid #cdd8cf;
+      border-radius: 8px;
+      min-height: 42px;
+      padding: 10px 14px;
+      background: #fff;
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: background .15s;
+    }
+
+    .btn svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: var(--tint);
+    }
+
+    .btn-primary {
+      background: var(--green);
+      border-color: var(--green);
+      color: #fff;
+      min-height: 46px;
+      font-size: 14px;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--green-hover);
+    }
+
+    .btn-secondary {
+      background: var(--tint);
+      border-color: #d3e1d5;
+    }
+
+    .action-divider {
+      height: 1px;
+      background: var(--line);
+      margin: 6px 0;
+    }
+
+    .button-hint,
+    .edit-tip {
+      color: var(--green);
+      background: var(--tint);
+      border-left: 3px solid var(--green);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.5;
+    }
+
+    .button-hint {
+      margin: 13px 0 0;
+      padding: 9px 11px;
+    }
+
+    .edit-tip {
+      padding: 4px 9px;
+    }
+
+    .result-editor:focus {
+      outline: 2px solid var(--green);
+      outline-offset: -2px;
+    }
+
+    .warning-list li[tabindex] {
+      cursor: pointer;
+    }
+
+    .warning-list li[tabindex]:hover,
+    .warning-list li[tabindex]:focus-visible {
+      background: #fff2c2;
+      outline: none;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 14px 20px;
+      background: #f2f7f1;
+      border-top: 1px solid var(--line);
+    }
+
+    .stat {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .stat strong {
+      font-size: 20px;
+      line-height: 1.3;
+      color: var(--green);
+      font-weight: 600;
+      display: block;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .warning-panel {
+      margin-top: 16px;
+      background: var(--yellow);
+      border: 1px solid var(--yellow-border);
+      border-radius: var(--radius);
+      padding: 15px 17px;
+    }
+
+    .warning-panel h2 {
+      color: var(--yellow-ink);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .warning-panel:not(.neutral) {
+      border-width: 2px;
+      box-shadow: 0 4px 14px #79571522;
+    }
+
+    .warning-panel:not(.neutral) h2 {
+      font-size: 15px;
+    }
+
+    .warning-panel:focus {
+      outline: none;
+    }
+
+    .warning-panel.attention {
+      animation: attention .9s ease-in-out 2;
+    }
+
+    @keyframes attention {
+      50% {
+        box-shadow: 0 0 0 6px #e8d38a;
+      }
+    }
+
+    .warning-jump {
+      width: 100%;
+      min-height: 42px;
+      border: 2px solid var(--yellow-border);
+      border-radius: 8px;
+      background: var(--yellow);
+      color: var(--yellow-ink);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .warning-jump:hover {
+      background: #fff0bf;
+    }
+
+    .warning-panel h2 svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .warning-panel .badge {
+      margin-left: auto;
+      border-radius: 4px;
+      padding: 0 6px;
+      background: #f4e8b7;
+      font-size: 11px;
+    }
+
+    .warning-list {
+      list-style: none;
+      padding: 0;
+      margin: 11px 0 0;
+      max-height: 260px;
+      overflow: auto;
+      font-size: 12px;
+      color: #735922;
+    }
+
+    .warning-list li {
+      padding: 9px 0 9px 10px;
+      border-top: 1px solid #eadeb8;
+      border-left: 3px solid var(--kind);
+      overflow-wrap: anywhere;
+    }
+
+    .w-error {
+      --kind: #a33730;
+    }
+
+    .w-check {
+      --kind: #b7791f;
+    }
+
+    .w-info {
+      --kind: #2b6cb0;
+    }
+
+    .warning-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 14px;
+      margin: 10px 0 0;
+      font-size: 11px;
+      color: var(--ink);
+    }
+
+    .warning-legend span::before {
+      content: '';
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--kind);
+      margin-right: 5px;
+    }
+
+    .warning-tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--kind);
+      border: 1px solid var(--kind);
+      border-radius: 4px;
+      padding: 0 5px;
+      margin-right: 6px;
+    }
+
+    .warning-list li:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .warning-list strong {
+      font-weight: 650;
+    }
+
+    .warning-list pre {
+      white-space: pre-wrap;
+      font: inherit;
+      background: #fffdf4;
+      border-radius: 4px;
+      padding: 7px 9px;
+      margin: 6px 0 0;
+    }
+
+    .warning-empty {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .warning-panel.neutral {
+      background: #f9fbf8;
+      border-color: var(--line);
+    }
+
+    .warning-panel.neutral h2 {
+      color: var(--muted);
+    }
+
+    .config {
+      margin-top: 24px;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 14px 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .config summary {
+      cursor: pointer;
+      color: #435e4f;
+      font-weight: 600;
+    }
+
+    .config p {
+      margin: 10px 0 0;
+    }
+
+    .class-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin: 12px 0;
+    }
+
+    .class-list span {
+      padding: 3px 8px;
+      border: 1px solid var(--line);
+      background: white;
+      border-radius: 5px;
+      color: #4b6455;
+    }
+
+    footer {
+      font-size: 11px;
+      color: var(--muted);
+      padding-top: 16px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .message {
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      z-index: 50;
+      width: min(380px, calc(100vw - 36px));
+      display: flex;
+      gap: 11px;
+      align-items: flex-start;
+      padding: 13px 14px;
+      font-size: 13px;
+      line-height: 1.5;
+      border: 1px solid var(--red);
+      border-radius: 10px;
+      background: #fff2ef;
+      color: var(--red);
+      box-shadow: 0 10px 30px #20352e2e;
+      animation: toast-in .2s ease-out;
+    }
+
+    .message[hidden] {
+      display: none;
+    }
+
+    .message.success {
+      color: #16803c;
+      background: #effaf2;
+      border-color: #16a34a;
+    }
+
+    .message-icon {
+      flex: none;
+      width: 20px;
+      height: 20px;
+      margin-top: 1px;
+      border-radius: 50%;
+      background: currentColor;
+      display: grid;
+      place-items: center;
+    }
+
+    .message-icon::after {
+      content: '!';
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .message.success .message-icon::after {
+      content: '✓';
+    }
+
+    .message-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .message-body strong {
+      display: block;
+      font-weight: 700;
+    }
+
+    .message-body strong:empty {
+      display: none;
+    }
+
+    .message-body p {
+      margin: 0;
+    }
+
+    .message-body strong:not(:empty) + p {
+      margin-top: 2px;
+      opacity: .85;
+    }
+
+    .message-close {
+      flex: none;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      font-size: 20px;
+      line-height: 1;
+      padding: 0 2px;
+      cursor: pointer;
+    }
+
+    @keyframes toast-in {
+      from {
+        opacity: 0;
+        transform: translateY(-8px);
+      }
+    }
+
+    .stale-note {
+      padding: 8px 20px;
+      background: #fff8df;
+      border-bottom: 1px solid #eadeb8;
+      font-size: 11px;
+      color: var(--yellow-ink);
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid #ffffff66;
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+
+      *,
+      *::before,
+      *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+
+    @media (max-width:1100px) {
+      .shell {
+        padding: 0 20px;
+      }
+
+      .workspace {
+        gap: 14px;
+        grid-template-columns: minmax(0, 1fr) 205px minmax(0, 1.1fr);
+      }
+
+      .panel-header,
+      .editor {
+        padding: 16px;
+      }
+
+      .control-panel {
+        padding: 17px 14px;
+      }
+
+      .panel-header {
+        align-items: flex-start;
+        flex-wrap: wrap;
+      }
+    }
+
+    @media (max-width:800px) {
+      .workspace {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .intro {
+        display: block;
+      }
+
+      .shortcut {
+        margin-top: 12px;
+      }
+
+      .editor {
+        min-height: 280px;
+      }
+
+      .control-panel {
+        padding: 20px;
+      }
+
+      .session-fields {
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+      }
+
+      .mode-help {
+        min-height: 0;
+        margin-bottom: 16px;
+      }
+
+      .actions {
+        grid-template-columns: 1fr 1fr;
+        margin-top: 16px;
+      }
+
+      .action-divider {
+        display: none;
+      }
+
+      .actions .btn-primary {
+        grid-column: 1/-1;
+      }
+
+      .control-panel h2 {
+        margin-bottom: 14px;
+      }
+
+      .top-note {
+        display: none;
+      }
+
+      h1 {
+        font-size: 26px;
+      }
+
+      .intro p {
+        font-size: 13px;
+      }
+
+      footer {
+        flex-direction: column;
+        gap: 3px;
+      }
+    }
+
+    @media (max-width:380px) {
+      .shell {
+        padding: 0 14px;
+      }
+
+      .session-fields {
+        grid-template-columns: 1fr;
+      }
+
+      .stats {
+        gap: 8px;
+        padding: 12px 16px;
+      }
+
+      .panel-header {
+        gap: 2px;
+      }
+    }
   </style>
 </head>
+
 <body>
   <header class="topbar">
     <div class="shell">
-      <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3h12v18H6zM9 8h6M9 12h6M9 16h3"/></svg></span>Báo vắng</div>
+      <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="1.7">
+            <path d="M6 3h12v18H6zM9 8h6M9 12h6M9 16h3" />
+          </svg></span>Báo vắng</div>
       <span class="top-note">Công cụ dành cho giáo vụ</span>
     </div>
   </header>
   <main class="shell">
     <div class="intro">
-      <div><h1>Tổng hợp báo vắng</h1><p>Dán tin nhắn, kiểm tra danh sách, hoàn tất báo cáo.</p></div>
+      <div>
+        <h1>Tổng hợp báo vắng</h1>
+      </div>
       <div class="shortcut"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> để Format</div>
     </div>
-    <noscript><p class="message">Hãy bật JavaScript để sử dụng ứng dụng.</p></noscript>
-    <div id="message" class="message" role="status" aria-live="polite" hidden></div>
+    <noscript>
+      <p class="message" style="position:static;width:auto;margin:18px 0">Hãy bật JavaScript để sử dụng ứng dụng.</p>
+    </noscript>
+    <div id="message" class="message" role="status" aria-live="polite" hidden><span class="message-icon" aria-hidden="true"></span><div class="message-body"><strong id="message-title"></strong><p id="message-text"></p></div><button class="message-close" id="message-close" type="button" aria-label="Đóng thông báo">×</button></div>
     <div class="workspace" id="workspace">
       <section aria-labelledby="input-title">
         <div class="panel">
-          <div class="panel-header"><div><h2 id="input-title">Tin nhắn đầu vào</h2><p>Dán một hoặc nhiều tin nhắn từ nhóm lớp.</p></div><button class="text-button" id="sample-button" type="button">Dùng ví dụ</button></div>
-          <textarea class="editor" id="input-text" aria-label="Tin nhắn đầu vào" spellcheck="false" maxlength="100000" placeholder="Lớp 12C9 vắng 3&#10;Nhật Huy (P)&#10;Tuấn Huy (P)&#10;Duy Hải (K)&#10;&#10;12c11 vắng 1 phương thảo&#10;12c2 sĩ số40 văng 0&#10;&#10;10C6 Vắng 4K Thanh Luân, Minh Nhật, Gia Tuấn, Quốc Huy 1P Huy Hoàng"></textarea>
-          <div class="editor-footer"><span id="save-status">Tự lưu nháp trên trình duyệt</span><span id="char-count">0 ký tự</span></div>
+          <div class="panel-header">
+            <div>
+              <h2 id="input-title">Tin nhắn đầu vào</h2>
+              <p>Dán một hoặc nhiều tin nhắn từ nhóm lớp.</p>
+            </div><button class="text-button" id="sample-button" type="button">Dùng ví dụ</button>
+          </div>
+          <textarea class="editor" id="input-text" aria-label="Tin nhắn đầu vào" spellcheck="false" maxlength="100000"
+            placeholder="Lớp 12C9 vắng 3&#10;Nhật Huy (P)&#10;Tuấn Huy (P)&#10;Duy Hải (K)&#10;&#10;12c11 vắng 1 phương thảo&#10;12c2 sĩ số40 văng 0&#10;&#10;10C6 Vắng 4K Thanh Luân, Minh Nhật, Gia Tuấn, Quốc Huy 1P Huy Hoàng"></textarea>
+          <div class="editor-footer"><span id="save-status">Tự lưu nháp trên trình duyệt</span><span id="char-count">0
+              ký tự</span></div>
         </div>
-        <div class="legend"><span><b>P</b> Có phép</span><span><b>K</b> Không phép</span><span><b>?</b> Chưa rõ</span></div>
+        <div class="legend"><span><b>P</b> Có phép</span><span><b>K</b> Không phép</span><span><b>?</b> Chưa rõ</span>
+        </div>
       </section>
 
       <section class="panel control-panel" aria-labelledby="control-title">
         <h2 id="control-title">Thiết lập báo cáo</h2>
         <div class="session-fields">
-          <div class="field-row"><div class="field"><label class="field-label" for="session">Buổi</label><select id="session"><option>Sáng</option><option>Chiều</option></select></div><div class="field"><label class="field-label" for="shift">Ca</label><input type="number" id="shift" value="1" min="1" max="99" step="1" required></div></div>
-          <div class="field"><label class="field-label" for="date">Ngày báo cáo</label><input id="date" type="date" min="1900-01-01" max="9999-12-31" required><div class="day-label" id="day-label"></div></div>
+          <div class="field-row">
+            <div class="field"><label class="field-label" for="session">Buổi</label><select id="session">
+                <option>Sáng</option>
+                <option>Chiều</option>
+              </select></div>
+            <div class="field"><label class="field-label" for="shift">Ca</label><input type="number" id="shift"
+                value="1" min="1" max="99" step="1" required></div>
+          </div>
+          <div class="field"><label class="field-label" for="date">Ngày báo cáo</label><input id="date" type="date"
+              min="1900-01-01" max="9999-12-31" required>
+            <div class="day-label" id="day-label"></div>
+          </div>
         </div>
         <div class="actions">
-          <button class="btn btn-primary" id="format-button" type="button"><span id="format-spinner" class="spinner" hidden></span><span id="format-label">Format</span><span aria-hidden="true" id="format-arrow">→</span></button>
+          <button class="warning-jump" id="warning-jump" type="button" hidden></button>
+          <button class="btn btn-primary" id="format-button" type="button"><span id="format-spinner" class="spinner"
+              hidden></span><span id="format-label">Format</span><span aria-hidden="true"
+              id="format-arrow">→</span></button>
           <button class="btn" id="clear-button" type="button">Xóa nội dung</button>
           <div class="action-divider"></div>
-          <button class="btn btn-secondary" id="export-button" type="button" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 15v5h16v-5"/></svg><span>Xuất Excel</span></button>
-          <button class="btn" id="copy-button" type="button" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M15 8V3H3v13h5"/></svg>Copy</button>
+          <button class="btn btn-secondary" id="export-button" type="button" disabled><svg viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+              <path d="M12 3v12m-4-4 4 4 4-4M4 15v5h16v-5" />
+            </svg><span>Xuất Excel</span></button>
+          <button class="btn" id="copy-button" type="button" disabled><svg viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+              <rect x="8" y="8" width="12" height="13" rx="2" />
+              <path d="M15 8V3H3v13h5" />
+            </svg>Copy</button>
         </div>
         <p class="button-hint">✎ Có thể sửa trực tiếp kết quả trước khi copy hoặc xuất Excel.</p>
       </section>
 
       <section aria-labelledby="output-title">
         <div class="panel">
-          <div class="panel-header"><div><h2 id="output-title">Bản báo cáo</h2><p>Đã nhóm theo khối và sắp xếp theo lớp.</p></div><span class="top-note" id="result-state">Chưa có kết quả</span></div>
+          <div class="panel-header">
+            <div>
+              <h2 id="output-title">Bản báo cáo</h2>
+              <p>Đã nhóm theo khối và sắp xếp theo lớp.</p>
+            </div><span class="top-note" id="result-state">Chưa có kết quả</span>
+          </div>
           <div id="stale-note" class="stale-note" hidden>Đầu vào đã thay đổi. Bấm Format để tạo lại báo cáo.</div>
-          <textarea class="editor result-editor" id="output-text" aria-label="Bản báo cáo có thể chỉnh sửa" spellcheck="false" maxlength="100000" placeholder="Bản báo cáo sẽ xuất hiện ở đây.&#10;&#10;Bạn có thể chỉnh sửa tên, trạng thái P/K và số vắng trước khi xuất."></textarea>
-          <div class="editor-footer"><span id="edit-status" class="edit-tip">✎ Cho phép chỉnh sửa trực tiếp</span><span>.txt → .xlsx</span></div>
-          <div class="stats" id="stats" hidden aria-live="polite"><div class="stat"><strong id="stat-classes">0</strong>Lớp đã báo</div><div class="stat"><strong id="stat-absent">0</strong>Học sinh vắng</div><div class="stat"><strong id="stat-warnings">0</strong>Cần kiểm tra</div></div>
+          <textarea class="editor result-editor" id="output-text" aria-label="Bản báo cáo có thể chỉnh sửa"
+            spellcheck="false" maxlength="100000"
+            placeholder="Bản báo cáo sẽ xuất hiện ở đây.&#10;&#10;Bạn có thể chỉnh sửa tên, trạng thái P/K và số vắng trước khi xuất."></textarea>
+          <div class="editor-footer"><span id="edit-status" class="edit-tip">✎ Cho phép chỉnh sửa trực
+              tiếp</span><span>.txt → .xlsx</span></div>
+          <div class="stats" id="stats" hidden aria-live="polite">
+            <div class="stat"><strong id="stat-classes">0</strong>Lớp đã báo</div>
+            <div class="stat"><strong id="stat-absent">0</strong>Học sinh vắng</div>
+            <div class="stat"><strong id="stat-warnings">0</strong>Cần kiểm tra</div>
+          </div>
         </div>
-        <div class="warning-panel neutral" id="warning-panel">
-          <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m12 3 10 18H2L12 3Z"/><path d="M12 9v5m0 3v1"/></svg>Cảnh báo<span class="badge" id="warning-count" hidden>0</span></h2>
+        <div class="warning-panel neutral" id="warning-panel" tabindex="-1">
+          <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+              <path d="m12 3 10 18H2L12 3Z" />
+              <path d="M12 9v5m0 3v1" />
+            </svg>Cảnh báo<span class="badge" id="warning-count" hidden>0</span></h2>
           <p class="warning-empty" id="warning-empty">Các mục cần kiểm tra sẽ hiển thị sau khi Format.</p>
           <p class="warning-legend" id="warning-legend" hidden></p>
           <ul class="warning-list" id="warning-list" hidden></ul>
         </div>
       </section>
     </div>
-    <details class="config"><summary>Danh sách lớp cần báo <span id="config-count"></span></summary><div class="class-list" id="class-list"></div><p>Lớp chưa báo sẽ để trống số vắng. Danh sách được lấy từ <code>config.json</code>.</p></details>
-    <footer><span id="privacy-note">Xử lý bằng quy tắc tại máy chủ của bạn, không gọi AI.</span><span>Kiểm tra các cảnh báo trước khi gửi báo cáo.</span></footer>
+    <div hidden id="class-list"></div><span hidden id="config-count"></span><span hidden id="privacy-note"></span>
   </main>
   <script>
     'use strict';
@@ -177,26 +1011,31 @@ Duy Hải (K)
 12C17 Vắng Trúc Vy, Mai Phương Uyên (P), Thu Hương (P)`;
     const STORAGE_KEY = 'bao-vang.draft.v1';
     const state = { sourceData: null, busy: false, previewTimer: null, previewController: null, saveTimer: null, revision: 0 };
-    function showMessage(message, success = false) {
-      $('message').textContent = message;
+    let messageTimer;
+    function showMessage(message, success = false, title = '') {
+      $('message-title').textContent = title;
+      $('message-text').textContent = message;
       $('message').classList.toggle('success', success);
       $('message').hidden = !message;
+      clearTimeout(messageTimer);
+      // Thông báo thành công tự ẩn; lỗi giữ lại tới khi người dùng đóng.
+      if (message && success) messageTimer = setTimeout(() => { $('message').hidden = true; }, 6000);
     }
     function localDate() {
       const now = new Date();
-      return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     }
     function sessionInfo() {
       if (!$('date').reportValidity() || !$('shift').reportValidity()) return null;
       return { buoi: $('session').value, ngay: $('date').value, ca: Number($('shift').value) };
     }
     function weekday(dateValue) {
-      const [y,m,d] = dateValue.split('-').map(Number);
-      const day = new Date(y,m-1,d,12).getDay();
-      return day === 0 ? 'Chủ nhật' : `thứ ${day+1}`;
+      const [y, m, d] = dateValue.split('-').map(Number);
+      const day = new Date(y, m - 1, d, 12).getDay();
+      return day === 0 ? 'Chủ nhật' : `thứ ${day + 1}`;
     }
     function title(session) {
-      const [y,m,d] = session.ngay.split('-');
+      const [y, m, d] = session.ngay.split('-');
       return `${session.buoi} ${weekday(session.ngay)}, ngày ${d}/${m}/${y}, ca ${session.ca}:`;
     }
     function updateDay() { $('day-label').textContent = $('date').value ? weekday($('date').value).replace(/^t/, 'T') : ''; }
@@ -220,8 +1059,10 @@ Duy Hải (K)
     function saveDraft() {
       clearTimeout(state.saveTimer);
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ text: $('input-text').value, output: $('output-text').value,
-          sourceData: state.sourceData, buoi: $('session').value, ngay: $('date').value, ca: $('shift').value }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          text: $('input-text').value, output: $('output-text').value,
+          sourceData: state.sourceData, buoi: $('session').value, ngay: $('date').value, ca: $('shift').value
+        }));
         $('save-status').textContent = 'Đã lưu nháp trên trình duyệt';
       } catch { $('save-status').textContent = 'Trình duyệt không cho lưu nháp'; }
     }
@@ -266,6 +1107,15 @@ Duy Hải (K)
       { key: 'info', tag: 'Để biết', label: 'Đã tự xử lý, chỉ để biết', codes: ['default_k', 'overwritten'] },
     ];
     const kindOf = code => WARNING_KINDS.find(kind => kind.codes.includes(code)) || WARNING_KINDS[1];
+    function pulseWarnings() {
+      const panel = $('warning-panel');
+      panel.classList.remove('attention'); void panel.offsetWidth; panel.classList.add('attention');
+    }
+    function showWarnings() {
+      const panel = $('warning-panel');
+      panel.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+      panel.focus({ preventScroll: true }); pulseWarnings();
+    }
     function renderResultInfo(result) {
       // Gom theo loại (sort ổn định nên vẫn giữ thứ tự lớp trong từng loại).
       const warnings = [...result.warnings].sort((a, b) => WARNING_KINDS.indexOf(kindOf(a.code)) - WARNING_KINDS.indexOf(kindOf(b.code)));
@@ -299,6 +1149,8 @@ Duy Hải (K)
       $('warning-count').hidden = !warnings.length;
       $('warning-count').textContent = warnings.length;
       $('warning-panel').classList.toggle('neutral', !warnings.length);
+      $('warning-jump').hidden = !warnings.length;
+      $('warning-jump').textContent = `⚠ Có ${warnings.length} cảnh báo cần xem — bấm để tới phần Cảnh báo ↓`;
       $('stats').hidden = false;
       $('stat-classes').textContent = `${result.summary.reported}/${result.summary.classes}`;
       $('stat-absent').textContent = result.summary.absent;
@@ -334,7 +1186,7 @@ Duy Hải (K)
       state.previewController = new AbortController();
       const signal = state.previewController.signal;
       try {
-        const response = await request('/api/preview', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(editPayload(session)), signal });
+        const response = await request('/api/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editPayload(session)), signal });
         const result = await response.json();
         if (revision !== state.revision) return;
         renderResultInfo(result);
@@ -364,9 +1216,9 @@ Duy Hải (K)
       setBusy(true, true);
       const form = new FormData();
       form.append('text', $('input-text').value);
-      Object.entries(session).forEach(([key,value]) => form.append(key,value));
+      Object.entries(session).forEach(([key, value]) => form.append(key, value));
       try {
-        const response = await request('/api/format', {method:'POST',body:form});
+        const response = await request('/api/format', { method: 'POST', body: form });
         const result = await response.json();
         state.sourceData = result.data;
         $('output-text').value = result.text;
@@ -374,8 +1226,9 @@ Duy Hải (K)
         $('result-state').textContent = 'Đã chuẩn hóa';
         $('edit-status').textContent = '✎ Cho phép chỉnh sửa trực tiếp';
         renderResultInfo(result);
+        if (result.warnings.length) pulseWarnings();
         saveDraft();
-        showMessage(`Đã tổng hợp ${result.summary.reported} lớp. ${result.warnings.length ? 'Kiểm tra các mục tô vàng trước khi gửi.' : 'Bản báo cáo đã sẵn sàng.'}`, true);
+        showMessage(result.warnings.length ? `Kiểm tra ${result.warnings.length} cảnh báo (phân theo màu) trước khi gửi.` : 'Bản báo cáo đã sẵn sàng.', true, `Đã tổng hợp ${result.summary.reported} lớp`);
       } catch (error) { showMessage(error.message); }
       finally { setBusy(false); }
     }
@@ -387,9 +1240,9 @@ Duy Hải (K)
       $('export-button').querySelector('span').textContent = 'Đang xuất…';
       try {
         const payload = JSON.stringify(editPayload(session));
-        const checked = await request('/api/preview', {method:'POST',headers:{'Content-Type':'application/json'},body:payload});
+        const checked = await request('/api/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload });
         renderResultInfo(await checked.json());
-        const response = await request('/api/export', {method:'POST',headers:{'Content-Type':'application/json'},body:payload});
+        const response = await request('/api/export', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload });
         const blob = await response.blob();
         const filename = /filename="([^"]+)"/.exec(response.headers.get('Content-Disposition') || '')?.[1] || 'bao-vang.xlsx';
         const url = URL.createObjectURL(blob);
@@ -413,7 +1266,7 @@ Duy Hải (K)
       }
     }
     function resetInfo() {
-      $('warning-list').replaceChildren(); $('warning-list').hidden = true; $('warning-legend').hidden = true;
+      $('warning-list').replaceChildren(); $('warning-list').hidden = true; $('warning-legend').hidden = true; $('warning-jump').hidden = true;
       $('warning-count').hidden = true; $('warning-panel').classList.add('neutral');
       $('warning-empty').hidden = false; $('warning-empty').textContent = 'Các mục cần kiểm tra sẽ hiển thị sau khi Format.';
       $('stats').hidden = true; $('stale-note').hidden = true;
@@ -428,10 +1281,10 @@ Duy Hải (K)
       try {
         const draft = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
         if (draft && typeof draft.text === 'string') {
-          $('input-text').value = draft.text.slice(0,100000);
-          $('output-text').value = typeof draft.output === 'string' ? draft.output.slice(0,100000) : '';
+          $('input-text').value = draft.text.slice(0, 100000);
+          $('output-text').value = typeof draft.output === 'string' ? draft.output.slice(0, 100000) : '';
           state.sourceData = draft.sourceData || null;
-          if (['Sáng','Chiều'].includes(draft.buoi)) $('session').value = draft.buoi;
+          if (['Sáng', 'Chiều'].includes(draft.buoi)) $('session').value = draft.buoi;
           if (Number(draft.ca) >= 1 && Number(draft.ca) <= 99) $('shift').value = draft.ca;
           // Chỉ khôi phục ngày cũ khi có báo cáo đã soạn, tránh đổi tiêu đề bản nháp.
           if ($('output-text').value && /^\d{4}-\d{2}-\d{2}$/.test(draft.ngay)) $('date').value = draft.ngay;
@@ -447,14 +1300,16 @@ Duy Hải (K)
       } catch (error) { showMessage(error.message); }
       if ($('output-text').value.trim()) { $('result-state').textContent = 'Bản nháp'; await previewEdited(); }
     }
-    $('format-button').addEventListener('click',formatMessage);
-    $('export-button').addEventListener('click',exportExcel);
-    $('copy-button').addEventListener('click',copyResult);
-    $('clear-button').addEventListener('click',clearAll);
-    $('input-text').addEventListener('input',updateInput);
-    $('output-text').addEventListener('input',outputChanged);
-    $('sample-button').addEventListener('click',() => { $('input-text').value = SAMPLE; updateInput(); $('input-text').focus(); });
-    ['session','date','shift'].forEach(id => $(id).addEventListener('change',() => {
+    $('format-button').addEventListener('click', formatMessage);
+    $('message-close').addEventListener('click', () => showMessage(''));
+    $('warning-jump').addEventListener('click', showWarnings);
+    $('export-button').addEventListener('click', exportExcel);
+    $('copy-button').addEventListener('click', copyResult);
+    $('clear-button').addEventListener('click', clearAll);
+    $('input-text').addEventListener('input', updateInput);
+    $('output-text').addEventListener('input', outputChanged);
+    $('sample-button').addEventListener('click', () => { $('input-text').value = SAMPLE; updateInput(); $('input-text').focus(); });
+    ['session', 'date', 'shift'].forEach(id => $(id).addEventListener('change', () => {
       updateDay(); const session = sessionInfo();
       if (session && $('output-text').value.trim()) {
         const lines = $('output-text').value.split('\n');
@@ -463,9 +1318,10 @@ Duy Hải (K)
       }
       scheduleSave();
     }));
-    document.addEventListener('keydown',event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); formatMessage(); } });
-    window.addEventListener('pagehide',saveDraft);
+    document.addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); formatMessage(); } });
+    window.addEventListener('pagehide', saveDraft);
     initialize();
   </script>
 </body>
+
 </html>
