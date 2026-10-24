@@ -75,7 +75,11 @@
     .warning-panel h2 svg { width:16px; height:16px; }
     .warning-panel .badge { margin-left:auto; border-radius:4px; padding:0 6px; background:#f4e8b7; font-size:11px; }
     .warning-list { list-style:none; padding:0; margin:11px 0 0; max-height:260px; overflow:auto; font-size:12px; color:#735922; }
-    .warning-list li { padding:9px 0; border-top:1px solid #eadeb8; overflow-wrap:anywhere; }
+    .warning-list li { padding:9px 0 9px 10px; border-top:1px solid #eadeb8; border-left:3px solid var(--kind); overflow-wrap:anywhere; }
+    .w-error { --kind:#a33730; } .w-check { --kind:#b7791f; } .w-info { --kind:#2b6cb0; }
+    .warning-legend { display:flex; flex-wrap:wrap; gap:4px 14px; margin:10px 0 0; font-size:11px; color:var(--ink); }
+    .warning-legend span::before { content:''; display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--kind); margin-right:5px; }
+    .warning-tag { display:inline-block; font-size:10px; font-weight:700; color:var(--kind); border:1px solid var(--kind); border-radius:4px; padding:0 5px; margin-right:6px; }
     .warning-list li:first-child { border-top:0; padding-top:0; }
     .warning-list strong { font-weight:650; }
     .warning-list pre { white-space:pre-wrap; font:inherit; background:#fffdf4; border-radius:4px; padding:7px 9px; margin:6px 0 0; }
@@ -150,6 +154,7 @@
         <div class="warning-panel neutral" id="warning-panel">
           <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m12 3 10 18H2L12 3Z"/><path d="M12 9v5m0 3v1"/></svg>Cảnh báo<span class="badge" id="warning-count" hidden>0</span></h2>
           <p class="warning-empty" id="warning-empty">Các mục cần kiểm tra sẽ hiển thị sau khi Format.</p>
+          <p class="warning-legend" id="warning-legend" hidden></p>
           <ul class="warning-list" id="warning-list" hidden></ul>
         </div>
       </section>
@@ -255,11 +260,27 @@ Duy Hải (K)
       const line = input.value.slice(0, start).split('\n').length - 1;
       input.scrollTop = Math.max(0, line * (parseFloat(getComputedStyle(input).lineHeight) || 20) - input.clientHeight / 3);
     }
+    const WARNING_KINDS = [
+      { key: 'error', tag: 'Cần sửa', label: 'Sai lệch, cần sửa', codes: ['count_mismatch', 'group_mismatch', 'exceeds_size', 'unrecognized', 'unassigned'] },
+      { key: 'check', tag: 'Kiểm tra', label: 'Thiếu hoặc chưa rõ, cần kiểm tra', codes: ['missing', 'no_information', 'unknown_status', 'ambiguous', 'unknown_class'] },
+      { key: 'info', tag: 'Để biết', label: 'Đã tự xử lý, chỉ để biết', codes: ['default_k', 'overwritten'] },
+    ];
+    const kindOf = code => WARNING_KINDS.find(kind => kind.codes.includes(code)) || WARNING_KINDS[1];
     function renderResultInfo(result) {
-      const warnings = result.warnings;
+      // Gom theo loại (sort ổn định nên vẫn giữ thứ tự lớp trong từng loại).
+      const warnings = [...result.warnings].sort((a, b) => WARNING_KINDS.indexOf(kindOf(a.code)) - WARNING_KINDS.indexOf(kindOf(b.code)));
+      $('warning-legend').replaceChildren(...WARNING_KINDS.map(kind => {
+        const item = document.createElement('span'); item.className = `w-${kind.key}`;
+        item.textContent = `${kind.label} (${warnings.filter(w => kindOf(w.code) === kind).length})`;
+        return item;
+      }));
+      $('warning-legend').hidden = !warnings.length;
       $('warning-list').replaceChildren();
       for (const warning of warnings) {
         const li = document.createElement('li');
+        const kind = kindOf(warning.code);
+        li.className = `w-${kind.key}`;
+        const tag = document.createElement('span'); tag.className = 'warning-tag'; tag.textContent = kind.tag; li.append(tag);
         if (warning.class_name) { const label = document.createElement('strong'); label.textContent = `${warning.class_name}: `; li.append(label); }
         li.append(document.createTextNode(warning.message));
         if (warning.raw) { const pre = document.createElement('pre'); pre.textContent = warning.raw; li.append(pre); }
@@ -392,7 +413,7 @@ Duy Hải (K)
       }
     }
     function resetInfo() {
-      $('warning-list').replaceChildren(); $('warning-list').hidden = true;
+      $('warning-list').replaceChildren(); $('warning-list').hidden = true; $('warning-legend').hidden = true;
       $('warning-count').hidden = true; $('warning-panel').classList.add('neutral');
       $('warning-empty').hidden = false; $('warning-empty').textContent = 'Các mục cần kiểm tra sẽ hiển thị sau khi Format.';
       $('stats').hidden = true; $('stale-note').hidden = true;

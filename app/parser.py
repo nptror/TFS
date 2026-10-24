@@ -102,7 +102,7 @@ def _parse_block(code: str, raw: str, body: str) -> dict:
         "ten_lop": code, "si_so": None, "so_vang_khai_bao": None,
         "hoc_sinh": [], "raw": raw.strip(), "reported": True,
         "overwritten": 0, "groups": [], "unrecognized": [], "parse_notes": [],
-        "excluded_late": [],
+        "excluded_late": [], "defaulted_k": [],
     }
     sizes = SIZE_RE.findall(body)
     if sizes:
@@ -142,7 +142,9 @@ def _parse_block(code: str, raw: str, body: str) -> dict:
             record["excluded_late"].append(name)
             return
         inherited = record["groups"][group_index]["loai"] if group_index is not None else None
-        record["hoc_sinh"].append({"ten": name, "loai": explicit_status if has_status else inherited or "K"})  # không ghi P/K = không phép
+        if not has_status and inherited is None:
+            record["defaulted_k"].append(name)  # không ghi P/K = không phép; cảnh báo để người dùng biết
+        record["hoc_sinh"].append({"ten": name, "loai": explicit_status if has_status else inherited or "K"})
         if has_status and explicit_status is None and raw_status and raw_status.strip() != "?":
             record["parse_notes"].append(f"Trạng thái ({raw_status.strip()}) của {name} chưa rõ; cần kiểm tra.")
         if group_index is not None:

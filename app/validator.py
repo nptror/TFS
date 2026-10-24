@@ -49,6 +49,8 @@ def validate(data: dict, configured_classes: list[str]) -> dict:
         unclear = [student["ten"] for student in record["hoc_sinh"] if student["loai"] is None]
         if unclear:
             warn("unknown_status", "Chưa rõ P/K: " + ", ".join(unclear) + ".", code)
+        if record.get("defaulted_k"):
+            warn("default_k", "Không ghi P/K, mặc định K: " + ", ".join(record["defaulted_k"]) + ".", code)
         if record.get("overwritten", 0):
             warn("overwritten", f"Đã ghi đè {record['overwritten']} lần; dùng lần báo cuối cùng.", code)
         for group in record.get("groups", []):

@@ -164,3 +164,11 @@ def test_filler_trailing_status_and_arrival():
     assert records["11C7"]["so_vang_khai_bao"] == 1
     assert records["11C1"]["hoc_sinh"] == [{"ten": "Tấn Phát", "loai": "K"}]
     assert records["11C4"]["hoc_sinh"] == [{"ten": "Gia Vỹ", "loai": "K"}]
+
+
+def test_missing_status_defaults_to_k_with_warning():
+    data = parse_message("Lớp 11c1 vắng2 1 tấn phát 2. Nhật uy\n12C9 vắng 1 An (P)")
+    warnings = validate(data, ["11C1", "12C9"])["warnings"]
+    assert [s["loai"] for s in data["lop"][0]["hoc_sinh"]] == ["K", "K"]
+    assert [(w["class_name"], w["code"]) for w in warnings] == [("11C1", "default_k")]
+    assert warnings[0]["message"] == "Không ghi P/K, mặc định K: Tấn Phát, Nhật Uy."

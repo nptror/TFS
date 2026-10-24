@@ -78,7 +78,7 @@ bạn dán vào được báo cáo, không thêm lớp thiếu và không cảnh
 - Nhận `vắng2`, `vắng0`, `v3`, `v 1`, `v:0`, `vắng (3)`; `đủ`, `đi đủ`,
   `đủ ạ` được hiểu là 0 vắng. Không xóa các từ giống từ khóa nằm trong họ tên.
 - Tách số thứ tự khỏi tổng khai báo: `11c1 vắng2 1 tấn phát 2. Nhật uy`
-  thành hai tên Tấn Phát và Nhật Uy, đều chưa rõ P/K.
+  thành hai tên Tấn Phát và Nhật Uy, đều mặc định K nếu không ghi P/K.
 - Tách tên theo dấu phẩy, chấm phẩy, xuống dòng hoặc ngay sau `(P)/(K)/(?)`.
 - Nhóm `4K ... 1P ...` duy trì trạng thái qua các dòng; trạng thái sau tên ưu tiên
   hơn trạng thái nhóm. `(?)` giữ trạng thái chưa rõ, kể cả trong nhóm P/K.
@@ -97,7 +97,7 @@ bạn dán vào được báo cáo, không thêm lớp thiếu và không cảnh
   giữ nguyên số khai báo để đối chiếu. Nếu chỉ có `vắng 3` mà không có tên,
   vẫn giữ số 3 và cảnh báo thiếu tên, không đổi thành 0.
 - Khi không có số lẫn tên, để trống số vắng. `Vắng 0` chỉ dùng khi thực sự khai báo 0.
-- Không đoán P/K. Tên chưa rõ loại được ghi `(?)` và đưa vào cảnh báo.
+- Tên không ghi P/K (và không thuộc nhóm P/K) mặc định là **K**, kèm cảnh báo "Không ghi P/K, mặc định K" liệt kê riêng. `(?)` là ký hiệu chưa rõ: ghi `(?)` và đưa vào "Chưa rõ P/K".
 - Tên viết hoa đầu từ; dấu tiếng Việt được chuẩn hóa Unicode NFC.
   Tên viết tắt như `h.l bảo ngọc` thành `H.L Bảo Ngọc`, không đoán tên đầy đủ.
 - Phần trước mã lớp đầu tiên và các đoạn sai cú pháp được giữ trong cảnh báo.

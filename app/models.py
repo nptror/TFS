@@ -67,6 +67,7 @@ class ParsedClass(ClassRecord):
     unrecognized: list[str] = Field(default_factory=list)
     parse_notes: list[str] = Field(default_factory=list)
     excluded_late: list[str] = Field(default_factory=list)
+    defaulted_k: list[str] = Field(default_factory=list)
 
 
 class ParsedReport(BaseModel):
