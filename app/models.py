@@ -1,4 +1,4 @@
-"""Schema dùng chung. Metadata nội bộ nằm ngoài schema trích xuất của Gemini."""
+"""Schema dùng chung."""
 
 import re
 import unicodedata
@@ -51,11 +51,6 @@ class ClassRecord(BaseModel):
     @classmethod
     def clean_class(cls, value: str) -> str:
         return normalize_class(value)
-
-
-class Extraction(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    lop: list[ClassRecord] = Field(max_length=500)
 
 
 class GroupCount(BaseModel):

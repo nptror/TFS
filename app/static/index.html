@@ -47,13 +47,6 @@
     .control-panel h2 { margin-bottom:19px; }
     fieldset { margin:0; padding:0; border:0; min-width:0; }
     legend,.field-label { display:block; font-size:12px; font-weight:600; margin-bottom:7px; }
-    .mode-toggle { display:grid; grid-template-columns:1fr 1fr; padding:3px; border:1px solid var(--line); background:var(--bg); border-radius:8px; }
-    .mode-toggle label { cursor:pointer; position:relative; text-align:center; font-size:12px; font-weight:600; }
-    .mode-toggle input { position:absolute; opacity:0; width:1px; height:1px; }
-    .mode-toggle span { display:block; border-radius:5px; padding:7px 4px; color:var(--muted); }
-    .mode-toggle input:checked + span { background:var(--surface); color:var(--green); box-shadow:0 1px 3px #263c2017; }
-    .mode-toggle input:focus-visible + span { outline:2px solid var(--green); outline-offset:1px; }
-    .mode-help { color:var(--muted); font-size:11px; line-height:1.6; margin:9px 0 21px; min-height:36px; }
     .session-fields { border-top:1px solid var(--line); padding-top:18px; display:grid; gap:13px; }
     .field-row { display:grid; grid-template-columns:1fr 65px; gap:10px; }
     .field { min-width:0; }
@@ -68,7 +61,12 @@
     .btn-primary:hover:not(:disabled) { background:var(--green-hover); }
     .btn-secondary { background:var(--tint); border-color:#d3e1d5; }
     .action-divider { height:1px; background:var(--line); margin:6px 0; }
-    .button-hint { margin:13px 0 0; color:var(--muted); font-size:11px; line-height:1.6; }
+    .button-hint, .edit-tip { color:var(--green); background:var(--tint); border-left:3px solid var(--green); border-radius:6px; font-size:12px; font-weight:600; line-height:1.5; }
+    .button-hint { margin:13px 0 0; padding:9px 11px; }
+    .edit-tip { padding:4px 9px; }
+    .result-editor:focus { outline:2px solid var(--green); outline-offset:-2px; }
+    .warning-list li[tabindex] { cursor:pointer; }
+    .warning-list li[tabindex]:hover, .warning-list li[tabindex]:focus-visible { background:#fff2c2; outline:none; }
     .stats { display:flex; justify-content:space-between; gap:14px; padding:14px 20px; background:#f2f7f1; border-top:1px solid var(--line); }
     .stat { font-size:11px; color:var(--muted); }
     .stat strong { font-size:20px; line-height:1.3; color:var(--green); font-weight:600; display:block; font-variant-numeric:tabular-nums; }
@@ -84,18 +82,6 @@
     .warning-empty { margin:10px 0 0; color:var(--muted); font-size:12px; }
     .warning-panel.neutral { background:#f9fbf8; border-color:var(--line); }
     .warning-panel.neutral h2 { color:var(--muted); }
-    .upload-section { padding:17px 20px; border-top:1px solid var(--line); }
-    .dropzone { display:block; border:1px dashed #92aa9b; border-radius:8px; text-align:center; padding:20px 12px; cursor:pointer; background:#f6faf5; }
-    .dropzone.dragover { background:#dfecdf; border-color:var(--green); }
-    .dropzone strong { font-size:13px; color:var(--green); display:block; }
-    .dropzone small { font-size:11px; color:var(--muted); }
-    .file-picker { width:100%; margin-top:10px; font-size:12px; }
-    .file-picker::file-selector-button { border:1px solid #b8ccbd; border-radius:5px; padding:6px 10px; color:var(--green); background:white; margin-right:8px; cursor:pointer; }
-    .thumbnails { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:12px; }
-    .thumbnail { position:relative; margin:0; min-width:0; }
-    .thumbnail img { display:block; width:100%; height:82px; object-fit:cover; border-radius:7px; border:1px solid var(--line); }
-    .thumbnail figcaption { font-size:10px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:3px; }
-    .remove-image { position:absolute; right:4px; top:4px; border:1px solid #c8d3ca; border-radius:5px; background:white; color:var(--ink); width:25px; height:25px; font-size:17px; padding:0; line-height:1; }
     .config { margin-top:24px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:14px 0; color:var(--muted); font-size:12px; }
     .config summary { cursor:pointer; color:#435e4f; font-weight:600; }
     .config p { margin:10px 0 0; }
@@ -133,20 +119,12 @@
           <div class="panel-header"><div><h2 id="input-title">Tin nhắn đầu vào</h2><p>Dán một hoặc nhiều tin nhắn từ nhóm lớp.</p></div><button class="text-button" id="sample-button" type="button">Dùng ví dụ</button></div>
           <textarea class="editor" id="input-text" aria-label="Tin nhắn đầu vào" spellcheck="false" maxlength="100000" placeholder="Lớp 12C9 vắng 3&#10;Nhật Huy (P)&#10;Tuấn Huy (P)&#10;Duy Hải (K)&#10;&#10;12c11 vắng 1 phương thảo&#10;12c2 sĩ số40 văng 0&#10;&#10;10C6 Vắng 4K Thanh Luân, Minh Nhật, Gia Tuấn, Quốc Huy 1P Huy Hoàng"></textarea>
           <div class="editor-footer"><span id="save-status">Tự lưu nháp trên trình duyệt</span><span id="char-count">0 ký tự</span></div>
-          <div class="upload-section" id="upload-section" hidden>
-            <label class="dropzone" id="dropzone" for="image-input"><strong>Kéo thả ảnh vào đây</strong><small>Hoặc chọn ảnh từ thiết bị bên dưới</small></label>
-            <input class="file-picker" id="image-input" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-label="Chọn ảnh báo vắng">
-            <p class="mode-help" style="margin-bottom:0">Tối đa 8 ảnh, 4 MB/ảnh, tổng 12 MB. Ảnh không được lưu vào bản nháp.</p>
-            <div class="thumbnails" id="thumbnails"></div>
-          </div>
         </div>
         <div class="legend"><span><b>P</b> Có phép</span><span><b>K</b> Không phép</span><span><b>?</b> Chưa rõ</span></div>
       </section>
 
       <section class="panel control-panel" aria-labelledby="control-title">
         <h2 id="control-title">Thiết lập báo cáo</h2>
-        <fieldset><legend>Chế độ xử lý</legend><div class="mode-toggle"><label><input type="radio" name="mode" value="text" checked><span>Chỉ text</span></label><label><input type="radio" name="mode" value="image"><span>Có ảnh</span></label></div></fieldset>
-        <p class="mode-help" id="mode-help">Xử lý trực tiếp bằng quy tắc, không gọi AI.</p>
         <div class="session-fields">
           <div class="field-row"><div class="field"><label class="field-label" for="session">Buổi</label><select id="session"><option>Sáng</option><option>Chiều</option></select></div><div class="field"><label class="field-label" for="shift">Ca</label><input type="number" id="shift" value="1" min="1" max="99" step="1" required></div></div>
           <div class="field"><label class="field-label" for="date">Ngày báo cáo</label><input id="date" type="date" min="1900-01-01" max="9999-12-31" required><div class="day-label" id="day-label"></div></div>
@@ -158,7 +136,7 @@
           <button class="btn btn-secondary" id="export-button" type="button" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 15v5h16v-5"/></svg><span>Xuất Excel</span></button>
           <button class="btn" id="copy-button" type="button" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M15 8V3H3v13h5"/></svg>Copy</button>
         </div>
-        <p class="button-hint">Có thể sửa trực tiếp kết quả trước khi copy hoặc xuất Excel.</p>
+        <p class="button-hint">✎ Có thể sửa trực tiếp kết quả trước khi copy hoặc xuất Excel.</p>
       </section>
 
       <section aria-labelledby="output-title">
@@ -166,7 +144,7 @@
           <div class="panel-header"><div><h2 id="output-title">Bản báo cáo</h2><p>Đã nhóm theo khối và sắp xếp theo lớp.</p></div><span class="top-note" id="result-state">Chưa có kết quả</span></div>
           <div id="stale-note" class="stale-note" hidden>Đầu vào đã thay đổi. Bấm Format để tạo lại báo cáo.</div>
           <textarea class="editor result-editor" id="output-text" aria-label="Bản báo cáo có thể chỉnh sửa" spellcheck="false" maxlength="100000" placeholder="Bản báo cáo sẽ xuất hiện ở đây.&#10;&#10;Bạn có thể chỉnh sửa tên, trạng thái P/K và số vắng trước khi xuất."></textarea>
-          <div class="editor-footer"><span id="edit-status">Cho phép chỉnh sửa trực tiếp</span><span>.txt → .xlsx</span></div>
+          <div class="editor-footer"><span id="edit-status" class="edit-tip">✎ Cho phép chỉnh sửa trực tiếp</span><span>.txt → .xlsx</span></div>
           <div class="stats" id="stats" hidden aria-live="polite"><div class="stat"><strong id="stat-classes">0</strong>Lớp đã báo</div><div class="stat"><strong id="stat-absent">0</strong>Học sinh vắng</div><div class="stat"><strong id="stat-warnings">0</strong>Cần kiểm tra</div></div>
         </div>
         <div class="warning-panel neutral" id="warning-panel">
@@ -177,7 +155,7 @@
       </section>
     </div>
     <details class="config"><summary>Danh sách lớp cần báo <span id="config-count"></span></summary><div class="class-list" id="class-list"></div><p>Lớp chưa báo sẽ để trống số vắng. Danh sách được lấy từ <code>config.json</code>.</p></details>
-    <footer><span id="privacy-note">Chế độ Chỉ text xử lý tại máy chủ của bạn.</span><span>Kiểm tra các cảnh báo trước khi gửi báo cáo.</span></footer>
+    <footer><span id="privacy-note">Xử lý bằng quy tắc tại máy chủ của bạn, không gọi AI.</span><span>Kiểm tra các cảnh báo trước khi gửi báo cáo.</span></footer>
   </main>
   <script>
     'use strict';
@@ -193,8 +171,7 @@ Duy Hải (K)
 10C5 Vắng 1K Quang Thanh
 12C17 Vắng Trúc Vy, Mai Phương Uyên (P), Thu Hương (P)`;
     const STORAGE_KEY = 'bao-vang.draft.v1';
-    const state = { images: [], sourceData: null, busy: false, aiConfigured: false, previewTimer: null, previewController: null, saveTimer: null, revision: 0 };
-    const mode = () => document.querySelector('input[name="mode"]:checked').value;
+    const state = { sourceData: null, busy: false, previewTimer: null, previewController: null, saveTimer: null, revision: 0 };
     function showMessage(message, success = false) {
       $('message').textContent = message;
       $('message').classList.toggle('success', success);
@@ -227,7 +204,7 @@ Duy Hải (K)
     function setBusy(busy, formatting = false) {
       state.busy = busy;
       $('workspace').setAttribute('aria-busy', String(busy));
-      document.querySelectorAll('#workspace input,#workspace select,#sample-button,#clear-button,.remove-image').forEach(el => el.disabled = busy);
+      document.querySelectorAll('#workspace input,#workspace select,#sample-button,#clear-button').forEach(el => el.disabled = busy);
       $('input-text').readOnly = busy;
       $('output-text').readOnly = busy;
       $('format-spinner').hidden = !formatting;
@@ -254,6 +231,30 @@ Duy Hải (K)
       state.previewController?.abort();
       state.revision++;
     }
+    // Tìm đoạn nguồn của cảnh báo; offset từ parser không khớp textarea nên tìm lại bằng text.
+    function locate(warning) {
+      const text = $('input-text').value;
+      if (warning.raw) {
+        const at = text.indexOf(warning.raw);
+        return at < 0 ? null : [at, at + warning.raw.length];
+      }
+      const code = /^(10|11|12)([A-Z])(\d+)$/.exec(warning.class_name || '');
+      if (!code) return null;
+      const one = new RegExp(String.raw`(?<![\p{L}\d])(?:lớp\s*[:=]?\s*)?${code[1]}\s*${code[2]}\s*0*${code[3]}(?!\d)`, 'giu');
+      const any = /(?<![\p{L}\d])(?:lớp\s*[:=]?\s*)?(?:10|11|12)\s*[a-z]\s*\d{1,3}(?!\d)/giu;
+      const starts = [...text.matchAll(one)].map(match => match.index);
+      if (!starts.length) return null;
+      const start = starts[starts.length - 1]; // báo cuối thắng
+      any.lastIndex = start + 1;
+      const next = any.exec(text);
+      return [start, next ? next.index : text.length];
+    }
+    function highlight([start, end]) {
+      const input = $('input-text');
+      input.focus(); input.setSelectionRange(start, end);
+      const line = input.value.slice(0, start).split('\n').length - 1;
+      input.scrollTop = Math.max(0, line * (parseFloat(getComputedStyle(input).lineHeight) || 20) - input.clientHeight / 3);
+    }
     function renderResultInfo(result) {
       const warnings = result.warnings;
       $('warning-list').replaceChildren();
@@ -262,6 +263,13 @@ Duy Hải (K)
         if (warning.class_name) { const label = document.createElement('strong'); label.textContent = `${warning.class_name}: `; li.append(label); }
         li.append(document.createTextNode(warning.message));
         if (warning.raw) { const pre = document.createElement('pre'); pre.textContent = warning.raw; li.append(pre); }
+        const range = locate(warning);
+        if (range) {
+          li.tabIndex = 0; li.title = 'Bấm để xem đoạn này trong tin nhắn đầu vào';
+          const go = () => highlight(range);
+          li.addEventListener('click', go);
+          li.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); go(); } });
+        }
         $('warning-list').append(li);
       }
       $('warning-list').hidden = !warnings.length;
@@ -329,15 +337,13 @@ Duy Hải (K)
       if (state.busy) return;
       const session = sessionInfo();
       if (!session) return;
-      if (mode() === 'text' && !$('input-text').value.trim()) { showMessage('Hãy dán tin nhắn cần chuẩn hóa.'); $('input-text').focus(); return; }
-      if (mode() === 'image' && !state.images.length) { showMessage('Hãy chọn ít nhất một ảnh cho chế độ Có ảnh.'); $('image-input').focus(); return; }
+      if (!$('input-text').value.trim()) { showMessage('Hãy dán tin nhắn cần chuẩn hóa.'); $('input-text').focus(); return; }
       invalidatePreview();
       showMessage('');
       setBusy(true, true);
       const form = new FormData();
-      form.append('mode', mode()); form.append('text', $('input-text').value);
+      form.append('text', $('input-text').value);
       Object.entries(session).forEach(([key,value]) => form.append(key,value));
-      if (mode() === 'image') state.images.forEach(item => form.append('images', item.file));
       try {
         const response = await request('/api/format', {method:'POST',body:form});
         const result = await response.json();
@@ -345,7 +351,7 @@ Duy Hải (K)
         $('output-text').value = result.text;
         $('stale-note').hidden = true;
         $('result-state').textContent = 'Đã chuẩn hóa';
-        $('edit-status').textContent = 'Cho phép chỉnh sửa trực tiếp';
+        $('edit-status').textContent = '✎ Cho phép chỉnh sửa trực tiếp';
         renderResultInfo(result);
         saveDraft();
         showMessage(`Đã tổng hợp ${result.summary.reported} lớp. ${result.warnings.length ? 'Kiểm tra các mục tô vàng trước khi gửi.' : 'Bản báo cáo đã sẵn sàng.'}`, true);
@@ -385,47 +391,16 @@ Duy Hải (K)
         } catch { showMessage('Đã chọn bản báo cáo. Nhấn Ctrl+C hoặc dùng lệnh Sao chép của thiết bị.'); }
       }
     }
-    function renderImages() {
-      $('thumbnails').replaceChildren();
-      state.images.forEach((item,index) => {
-        const figure = document.createElement('figure'); figure.className = 'thumbnail';
-        const image = document.createElement('img'); image.src = item.url; image.alt = `Ảnh báo vắng ${index+1}`;
-        const caption = document.createElement('figcaption'); caption.textContent = `${index+1}. ${item.file.name}`;
-        const remove = document.createElement('button'); remove.className = 'remove-image'; remove.type = 'button'; remove.textContent = '×';
-        remove.setAttribute('aria-label', `Xóa ảnh ${item.file.name}`);
-        remove.addEventListener('click', () => { if (state.busy) return; URL.revokeObjectURL(item.url); state.images.splice(index,1); renderImages(); updateInput(); });
-        figure.append(image,remove,caption); $('thumbnails').append(figure);
-      });
-    }
-    function addImages(files) {
-      if (state.busy) return;
-      const errors = [];
-      for (const file of files) {
-        if (!['image/jpeg','image/png','image/webp'].includes(file.type)) { errors.push(`${file.name}: chỉ nhận PNG/JPEG/WebP.`); continue; }
-        if (state.images.length >= 8) { errors.push('Chỉ nhận tối đa 8 ảnh.'); break; }
-        if (!file.size || file.size > 4*1024*1024) { errors.push(`${file.name}: ảnh phải có dữ liệu và không quá 4 MB.`); continue; }
-        if (file.size + state.images.reduce((sum,item) => sum+item.file.size,0) > 12*1024*1024) { errors.push('Tổng ảnh không được vượt quá 12 MB.'); continue; }
-        state.images.push({file,url:URL.createObjectURL(file)});
-      }
-      renderImages(); updateInput(); showMessage([...new Set(errors)].join(' '));
-    }
-    function updateMode() {
-      const withImages = mode() === 'image';
-      $('upload-section').hidden = !withImages;
-      $('mode-help').textContent = withImages ? (state.aiConfigured ? 'Gửi text và ảnh đến Gemini để đọc nội dung.' : 'Cần GEMINI_API_KEY trong .env để đọc ảnh.') : 'Xử lý trực tiếp bằng quy tắc, không gọi AI.';
-      $('privacy-note').textContent = withImages ? 'Chế độ Có ảnh gửi nội dung đến Google Gemini khi bấm Format.' : 'Chế độ Chỉ text xử lý tại máy chủ của bạn.';
-    }
     function resetInfo() {
       $('warning-list').replaceChildren(); $('warning-list').hidden = true;
       $('warning-count').hidden = true; $('warning-panel').classList.add('neutral');
       $('warning-empty').hidden = false; $('warning-empty').textContent = 'Các mục cần kiểm tra sẽ hiển thị sau khi Format.';
       $('stats').hidden = true; $('stale-note').hidden = true;
-      $('result-state').textContent = 'Chưa có kết quả'; $('edit-status').textContent = 'Cho phép chỉnh sửa trực tiếp';
+      $('result-state').textContent = 'Chưa có kết quả'; $('edit-status').textContent = '✎ Cho phép chỉnh sửa trực tiếp';
     }
     function clearAll() {
       invalidatePreview(); $('input-text').value = ''; $('output-text').value = ''; state.sourceData = null;
-      state.images.forEach(item => URL.revokeObjectURL(item.url)); state.images = []; $('image-input').value = '';
-      renderImages(); resetInfo(); updateButtons(); updateInput(); saveDraft(); showMessage(''); $('input-text').focus();
+      resetInfo(); updateButtons(); updateInput(); saveDraft(); showMessage(''); $('input-text').focus();
     }
     async function initialize() {
       $('date').value = localDate();
@@ -445,11 +420,10 @@ Duy Hải (K)
       $('char-count').textContent = `${$('input-text').value.length.toLocaleString('vi-VN')} ký tự`;
       updateDay(); updateButtons();
       try {
-        const response = await request('/api/config'); const config = await response.json(); state.aiConfigured = config.ai_configured;
+        const response = await request('/api/config'); const config = await response.json();
         $('config-count').textContent = `(${config.classes.length} lớp)`;
         config.classes.forEach(code => { const tag = document.createElement('span'); tag.textContent = code; $('class-list').append(tag); });
       } catch (error) { showMessage(error.message); }
-      updateMode();
       if ($('output-text').value.trim()) { $('result-state').textContent = 'Bản nháp'; await previewEdited(); }
     }
     $('format-button').addEventListener('click',formatMessage);
@@ -459,7 +433,6 @@ Duy Hải (K)
     $('input-text').addEventListener('input',updateInput);
     $('output-text').addEventListener('input',outputChanged);
     $('sample-button').addEventListener('click',() => { $('input-text').value = SAMPLE; updateInput(); $('input-text').focus(); });
-    document.querySelectorAll('input[name="mode"]').forEach(input => input.addEventListener('change',updateMode));
     ['session','date','shift'].forEach(id => $(id).addEventListener('change',() => {
       updateDay(); const session = sessionInfo();
       if (session && $('output-text').value.trim()) {
@@ -469,10 +442,6 @@ Duy Hải (K)
       }
       scheduleSave();
     }));
-    $('image-input').addEventListener('change',event => { addImages(event.target.files); event.target.value = ''; });
-    ['dragenter','dragover'].forEach(name => $('dropzone').addEventListener(name,event => { event.preventDefault(); $('dropzone').classList.add('dragover'); }));
-    ['dragleave','drop'].forEach(name => $('dropzone').addEventListener(name,event => { event.preventDefault(); $('dropzone').classList.remove('dragover'); }));
-    $('dropzone').addEventListener('drop',event => addImages(event.dataTransfer.files));
     document.addEventListener('keydown',event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); formatMessage(); } });
     window.addEventListener('pagehide',saveDraft);
     initialize();

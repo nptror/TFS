@@ -6,14 +6,13 @@ from openpyxl import load_workbook
 import pytest
 
 from app import main
-from app.ai_extractor import ExtractionError
 
 
 SESSION = {"buoi": "Chiều", "ngay": "2026-10-23", "ca": 1}
 
 
 def format_request(client, text):
-    return client.post("/api/format", data={**SESSION, "mode": "text", "text": text})
+    return client.post("/api/format", data={**SESSION, "text": text})
 
 
 def export_payload(result, text=None):
@@ -24,10 +23,7 @@ def class_row(sheet, code):
     return next(row for row in sheet.iter_rows() if row[0].value == code)
 
 
-def test_home_config_and_text_never_calls_ai(client, monkeypatch):
-    async def forbidden(*args):
-        raise AssertionError("Text mode must not call AI")
-    monkeypatch.setattr(main, "extract_with_gemini", forbidden)
+def test_home_and_config(client):
     assert client.get("/").status_code == 200
     assert "Tin nhắn đầu vào" in client.get("/").text
     assert "10C10" in client.get("/api/config").json()["classes"]
@@ -80,43 +76,10 @@ def test_export_retains_unclear_and_duplicate_warnings(client):
     assert any(row[6].value and "chào" in row[6].value for row in sheet.iter_rows())
 
 
-@pytest.mark.parametrize("updates", [{"text": ""}, {"ca": 0}, {"ngay": "2026-02-31"}, {"mode": "invalid"}])
+@pytest.mark.parametrize("updates", [{"text": ""}, {"ca": 0}, {"ngay": "2026-02-31"}])
 def test_invalid_requests(client, updates):
-    data = {**SESSION, "mode": "text", "text": "12C9 vắng 0", **updates}
+    data = {**SESSION, "text": "12C9 vắng 0", **updates}
     assert client.post("/api/format", data=data).status_code in (400, 422)
-
-
-def test_images_required_rejected_in_text_and_validated(client, png_bytes):
-    assert client.post("/api/format", data={**SESSION, "mode": "image"}).status_code == 400
-    files = [("images", ("test.png", png_bytes, "image/png"))]
-    assert client.post("/api/format", data={**SESSION, "mode": "text", "text": "12C9 vắng 0"}, files=files).status_code == 400
-    assert client.post("/api/format", data={**SESSION, "mode": "image"}, files=[("images", ("bad.png", b"not an image", "image/png"))]).status_code == 400
-    assert client.post("/api/format", data={**SESSION, "mode": "image"}, files=files * 9).status_code == 400
-
-
-def test_no_key_and_image_mode_mock(client, monkeypatch, png_bytes):
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-    files = [("images", ("test.png", png_bytes, "image/png"))]
-    response = client.post("/api/format", data={**SESSION, "mode": "image"}, files=files)
-    assert response.status_code == 503 and "GEMINI_API_KEY" in response.json()["detail"]
-
-    async def extract(text, images):
-        assert text == "tin nhắn" and images[0] == ("image/png", png_bytes)
-        return {"lop": [{"ten_lop": "12C9", "si_so": None, "so_vang_khai_bao": 1,
-                         "hoc_sinh": [{"ten": "thu hương", "loai": None}]}]}
-    monkeypatch.setattr(main, "extract_with_gemini", extract)
-    response = client.post("/api/format", data={**SESSION, "mode": "image", "text": "tin nhắn"}, files=files)
-    assert response.status_code == 200
-    assert "Thu Hương (?)" in response.json()["text"]
-    assert any(w["code"] == "unknown_status" for w in response.json()["warnings"])
-
-
-def test_ai_error_reaches_ui(client, monkeypatch, png_bytes):
-    async def fail(*args):
-        raise ExtractionError("Gemini đang giới hạn yêu cầu (429).", 429)
-    monkeypatch.setattr(main, "extract_with_gemini", fail)
-    response = client.post("/api/format", data={**SESSION, "mode": "image"}, files=[("images", ("test.png", png_bytes))])
-    assert response.status_code == 429 and "429" in response.json()["detail"]
 
 
 def test_bad_config_reports_clear_error(client, monkeypatch, tmp_path):

@@ -3,10 +3,8 @@
 Requires playwright and a locally installed Chrome. No external API is called.
 """
 
-from io import BytesIO
 from pathlib import Path
 
-from PIL import Image
 from openpyxl import load_workbook
 from playwright.sync_api import sync_playwright, expect
 
@@ -26,7 +24,6 @@ def run():
         page.on("pageerror", lambda error: errors.append(str(error)))
         page.goto("http://127.0.0.1:8765", wait_until="networkidle")
         expect(page.locator("#config-count")).to_have_text("(14 lớp)")
-        expect(page.locator("#upload-section")).to_be_hidden()
         page.locator("#session").select_option("Chiều")
         page.locator("#date").fill("2026-10-23")
         page.get_by_role("button", name="Dùng ví dụ").click()
@@ -61,21 +58,6 @@ def run():
         assert "Phương Thảo (P)" in page.locator("#output-text").input_value()
         assert page.locator("#date").input_value() == "2026-10-23"
 
-        # Upload and remove thumbnails without sending any data to Gemini.
-        page.get_by_text("Có ảnh", exact=True).click()
-        expect(page.locator("#upload-section")).to_be_visible()
-        image = BytesIO()
-        Image.new("RGB", (20,20), "white").save(image, format="PNG")
-        page.locator("#image-input").set_input_files([
-            {"name":"first.png", "mimeType":"image/png", "buffer":image.getvalue()},
-            {"name":"second.png", "mimeType":"image/png", "buffer":image.getvalue()},
-        ])
-        expect(page.locator(".thumbnail")).to_have_count(2)
-        page.get_by_role("button", name="Xóa ảnh first.png").click()
-        expect(page.locator(".thumbnail")).to_have_count(1)
-        page.get_by_text("Chỉ text", exact=True).click()
-        expect(page.locator("#upload-section")).to_be_hidden()
-
         for width in [390, 320, 768, 1024]:
             page.set_viewport_size({"width": width, "height":844})
             assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), f"Overflow at {width}px"
@@ -106,7 +88,7 @@ def run():
         assert not errors, errors
         context.close()
         browser.close()
-    print("Browser smoke passed: format, keyboard, editing, copy, Excel, images, draft, responsive.")
+    print("Browser smoke passed: format, keyboard, editing, copy, Excel, draft, responsive.")
 
 
 if __name__ == "__main__":

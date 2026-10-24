@@ -34,52 +34,21 @@ uvicorn app.main:app --reload
 ```
 
 Mở **http://127.0.0.1:8000**. Frontend được backend phục vụ trực tiếp;
-không mở HTML bằng `file://`. Chế độ **Chỉ text** và xuất Excel hoạt động ngay,
-không cần API key hay Internet sau khi cài thư viện.
-
-## Cấu hình Gemini (chỉ cho chế độ Có ảnh)
-
-1. Tạo bản sao `.env.example` tên `.env` tại thư mục gốc.
-2. Lấy API key ở [Google AI Studio](https://aistudio.google.com/apikey).
-3. Điền key và model khả dụng trong tài khoản:
-
-```dotenv
-GEMINI_API_KEY=your_api_key_here
-GEMINI_MODEL=gemini-3.8-flash
-```
-
-4. Khởi động lại uvicorn sau khi đổi `.env`.
-
-Model Flash mặc định có free tier theo [bảng giá Gemini](https://ai.google.dev/gemini-api/docs/pricing).
-Hạn mức, quyền truy cập và chi phí thực tế phụ thuộc tài khoản/project của Google;
-ứng dụng không tự chuyển model hoặc tự bật tính phí. Có thể thay `GEMINI_MODEL`
-bằng model Flash hỗ trợ ảnh và structured output trong tài khoản.
-
-Backend dùng REST `generateContent`, ảnh base64 qua `inlineData`, JSON schema qua
-`responseJsonSchema`, rồi kiểm tra lại bằng Pydantic. Xem
-[structured output](https://ai.google.dev/gemini-api/docs/generate-content/structured-output)
-và [đọc ảnh](https://ai.google.dev/gemini-api/docs/image-understanding).
-
-Key không gửi đến trình duyệt và `.env` đã được thêm vào `.gitignore`.
-Chỉ khi chọn **Có ảnh** và bấm **Format**, text và ảnh mới gửi đến Google Gemini.
-Dữ liệu ở free tier có thể được Google sử dụng để cải thiện sản phẩm theo điều khoản
-của họ; dùng dữ liệu học sinh phù hợp với quy định của đơn vị.
+không mở HTML bằng `file://`. Dán tin nhắn và xuất Excel hoạt động ngay,
+không cần Internet sau khi cài thư viện.
 
 ## Sử dụng
 
 1. Dán tin nhắn ở cột trái, hoặc bấm **Dùng ví dụ** để thử dữ liệu mẫu.
-2. Chọn **Chỉ text** hoặc **Có ảnh**. Chế độ ảnh hỗ trợ kéo thả/chọn nhiều ảnh,
-   xem thumbnail và xóa từng ảnh. Tối đa 8 ảnh PNG/JPEG/WebP, 4 MB mỗi ảnh,
-   tổng 12 MB; mỗi ảnh không quá 20 megapixel.
-3. Chọn buổi, ngày, ca. Ngày mặc định hôm nay theo thiết bị; thứ tự tính từ ngày.
-4. Bấm **Format**, hoặc **Ctrl+Enter** (macOS: **Cmd+Enter**).
-5. Xem các mục tô vàng. Sửa trực tiếp bản báo cáo ở bên phải nếu cần.
-6. Bấm **Copy** hoặc **Xuất Excel**. Excel đọc lại **bản đang hiển thị**,
+2. Chọn buổi, ngày, ca. Ngày mặc định hôm nay theo thiết bị; thứ tự tính từ ngày.
+3. Bấm **Format**, hoặc **Ctrl+Enter** (macOS: **Cmd+Enter**).
+4. Xem các mục tô vàng. Sửa trực tiếp bản báo cáo ở bên phải nếu cần.
+5. Bấm **Copy** hoặc **Xuất Excel**. Excel đọc lại **bản đang hiển thị**,
    không lấy danh sách cũ trước khi sửa.
 
 Đầu vào và bản báo cáo được tự lưu trong `localStorage` của trình duyệt. Nếu có báo
 cáo đã soạn, lần mở lại giữ ngày cũ của bản nháp; nếu chưa có báo cáo thì dùng hôm nay.
-Ảnh không được lưu trong bản nháp. **Xóa nội dung** xóa text, ảnh và báo cáo đang làm.
+**Xóa nội dung** xóa text và báo cáo đang làm.
 
 ## Danh sách lớp
 
@@ -154,7 +123,7 @@ Chủ nhật viết `Sáng Chủ nhật, ngày ...`, không viết `thứ Chủ 
 ## Sửa tay và Excel
 
 Khi sửa kết quả, cảnh báo tự kiểm tra lại sau khoảng nửa giây qua `/api/preview`.
-Thao tác này không gọi Gemini. Copy giữ nguyên nội dung đang sửa; Excel parse lại
+Copy giữ nguyên nội dung đang sửa; Excel parse lại
 nội dung đó, nhóm/sắp xếp lại và làm mới cảnh báo.
 
 Sĩ số gốc được giữ khi xuất vì mẫu text không hiển thị sĩ số. Có thể sửa rõ sĩ số
@@ -184,9 +153,7 @@ Tài liệu tương tác: **http://127.0.0.1:8000/docs**.
 
 | Trường | Giá trị |
 | --- | --- |
-| `mode` | `text` hoặc `image` |
-| `text` | Text đầu vào, tối đa 100.000 ký tự; có thể trống khi gửi ảnh |
-| `images` | Nhiều file cùng tên trường; chỉ nhận trong mode `image` |
+| `text` | Text đầu vào, tối đa 100.000 ký tự |
 | `buoi` | `Sáng` hoặc `Chiều` |
 | `ngay` | `YYYY-MM-DD` |
 | `ca` | Số nguyên từ 1 đến 99 |
@@ -215,10 +182,9 @@ Trả file `.xlsx` với `Content-Disposition: attachment`.
 ### API phụ
 
 - `POST /api/preview`: cùng payload như export, trả dữ liệu và cảnh báo đã tính lại.
-- `GET /api/config`: danh sách lớp, giới hạn ảnh và trạng thái đã có key; không trả key.
+- `GET /api/config`: danh sách lớp.
 
-Lỗi trả JSON `{"detail": "Thông báo tiếng Việt"}`. Có xử lý riêng cho 429,
-timeout, mất mạng, key/model sai, ảnh lỗi và JSON không hợp lệ. Giao diện giữ lại
+Lỗi trả JSON `{"detail": "Thông báo tiếng Việt"}`. Giao diện giữ lại
 nội dung đang có khi một yêu cầu thất bại.
 
 ## Kiểm thử
@@ -231,10 +197,6 @@ Bao gồm từng lớp trong dữ liệu mẫu, khoảng trắng/dấu tiếng V
 nhóm/riêng, lớp trùng, thiếu thông tin, sắp xếp số, Chủ nhật, API và đọc ngược file
 Excel để kiểm tra nội dung, màu nền, gộp ô và số liệu sau khi sửa tay.
 
-Các test Gemini dùng `httpx.MockTransport`, không gọi API thật và không tốn quota.
-Để kiểm thử đầu cuối với Gemini thực tế, điền key hợp lệ, chọn **Có ảnh**, tải ảnh
-báo vắng và kiểm tra lại kết quả trích xuất.
-
 Kiểm thử giao diện bổ sung (không bắt buộc để chạy app), dùng Chrome đã cài:
 
 ```bash
@@ -244,7 +206,7 @@ uvicorn app.main:app --port 8765
 python tests/browser_smoke.py
 ```
 
-Script kiểm tra desktop/mobile, phím tắt, sửa kết quả, tải Excel, ảnh và lưu nháp;
+Script kiểm tra desktop/mobile, phím tắt, sửa kết quả, tải Excel và lưu nháp;
 ảnh chụp kiểm tra được lưu trong `.tools/browser/` (đã bỏ qua trong Git).
 
 ## Cấu trúc
@@ -255,7 +217,6 @@ app/
   main.py              # FastAPI, routes và xử lý bản sửa tay
   models.py            # Schema Pydantic dùng chung
   parser.py            # Regex thuần, parse_message(text)
-  ai_extractor.py      # Gemini structured output, đọc và kiểm tra ảnh
   validator.py         # Cảnh báo, lớp thiếu, sắp xếp
   formatter.py         # Dữ liệu -> text, đọc tiêu đề
   excel_export.py      # openpyxl -> file trong bộ nhớ
@@ -264,15 +225,13 @@ tests/
   conftest.py
   test_parser.py
   test_api.py
-  test_ai_extractor.py
   browser_smoke.py
 config.json
-.env.example
 requirements.txt
 pytest.ini
 README.md
 ```
 
-Không database. Text và ảnh không được backend lưu cố định, Excel tạo trong RAM.
+Không database. Text không được backend lưu, Excel tạo trong RAM.
 Mặc định uvicorn chỉ mở trên `127.0.0.1`; ứng dụng dành cho chạy cục bộ, chưa có
 đăng nhập cho triển khai công khai. Nháp tồn tại trong trình duyệt cho tới khi xóa.
