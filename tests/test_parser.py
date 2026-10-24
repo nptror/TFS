@@ -194,10 +194,10 @@ Dạ em gửi 10c6 ạ
     assert records["12C19"]["so_vang_khai_bao"] == 0
     assert records["12C19"]["hoc_sinh"] == []
 
-    # 12C17 -> sĩ số 43, 4 học sinh (Trúc Vy, Mai Phương Uyên, Thu Hương, Bảo Khanh)
+    # 12C17 -> 3 vắng; Bảo Khanh (T) là đi trễ, không tính vào số vắng.
     assert records["12C17"]["si_so"] == 43
-    assert len(records["12C17"]["hoc_sinh"]) == 4
-    assert records["12C17"]["hoc_sinh"][3] == {"ten": "Bảo Khanh", "loai": None}
+    assert len(records["12C17"]["hoc_sinh"]) == 3
+    assert records["12C17"]["excluded_late"] == ["Bảo Khanh"]
 
     # Kiểm tra validate
     result = validate(parsed, config_classes)
@@ -207,7 +207,7 @@ Dạ em gửi 10c6 ạ
     assert "10C4 Vắng  1 Thịnh (P)" in formatted
     assert "10C8 Vắng  0" in formatted
     assert "12C16 Vắng  1 Lưu Văn Phát (P)" in formatted
-    assert "12C17 Vắng  4 Trúc Vy (?), Mai Phương Uyên (P), Thu Hương (P), Bảo Khanh (?)" in formatted
+    assert "12C17 Vắng  3 Trúc Vy (?), Mai Phương Uyên (P), Thu Hương (P)" in formatted
     assert "12C19 Vắng  0" in formatted
 
     # Cảnh báo không còn các cảnh báo sai/rác
@@ -219,5 +219,160 @@ Dạ em gửi 10c6 ạ
         assert "Đi Đủ Ạ" not in msg
         assert "Chưa rõ P/K: V" not in msg
         assert "Khai báo 0 vắng nhưng liệt kê 1 tên" not in msg
+
+
+def test_user_zalo_chat_and_numbering_cases():
+    user_input = """Lớp 11c1 vắng2 1 tấn phát 2. Nhật uy
+10C8 đi đủ
+10c10 đủ
+10C5 vắng 1: Quang Thang (K)
+Lớp 10c4 đủ ạ
+Lớp 10c3 đủ ạ
+[24/10/2026 07:19:35] Nguyễn Quốc khánh: 12c13 
+Vắng 0
+[24/10/2026 07:24:32] Quỳnh Vân: Lớp: 12C17
+Sĩ số: 43
+Vắng: Trúc Vy, Thụy Quỳnh Anh (P)
+[24/10/2026 07:27:48] Thế Dân: 12c2 sĩ số 40 vắng0
+[24/10/2026 07:48:45] Thanh Nhàn: 12C12
+vắng 6
+Trần Nguyễn Minh Anh ( P )
+Nguyễn Thị Thu Ngân ( P )
+Hồ Trần Minh An ( P ) 
+Lê Thị Ngọc Huyền ( P )
+Phạm Hoàng Nguyên
+Võ Quốc Hiếu
+[24/10/2026 08:55:00] Hân: 12c8 vắng 
+Quốc Bảo(p)
+[24/10/2026 09:26:16] Minh Quân: Lớp: 12C18
+Sĩ số : 32 
+Vắng không phép : (6)Vũ Tuấn Anh, Nguyễn xuân Duy,Trần Vũ Huy,Võ Phương Trà My,Phạm Quyết Tiến,Phạm Vũ Ngọc Trâm
+Trễ :(2)  Nguyễn Huy Kiệt, Nguyễn Phan Đăng Khoa
+[24/10/2026 09:43:10] Thái Anh Thư: 12C14
+Vắng 1
+Ngọc Mai (P)
+[24/10/2026 09:48:01] Vinh Quang: 12c7 v3 quỳnh như(p),thanh trúc(p),thùy trâm(p)"""
+
+    parsed = parse_message(user_input)
+    records = {r["ten_lop"]: r for r in parsed["lop"]}
+
+    # 1. 11C1: vắng2 + số thứ tự 1 tấn phát 2. Nhật uy
+    assert records["11C1"]["so_vang_khai_bao"] == 2
+    assert [(s["ten"], s["loai"]) for s in records["11C1"]["hoc_sinh"]] == [
+        ("Tấn Phát", None), ("Nhật Uy", None)
+    ]
+    assert records["11C1"]["unrecognized"] == []
+    assert records["11C1"]["parse_notes"] == []
+
+    # 2. Đủ / đi đủ / đủ ạ
+    for code in ["10C8", "10C10", "10C4", "10C3"]:
+        assert records[code]["so_vang_khai_bao"] == 0
+        assert records[code]["hoc_sinh"] == []
+
+    # 3. 10C5: vắng 1: Quang Thang (K)
+    assert records["10C5"]["so_vang_khai_bao"] == 1
+    assert [(s["ten"], s["loai"]) for s in records["10C5"]["hoc_sinh"]] == [("Quang Thang", "K")]
+
+    # 4. 12C13: Vắng 0 (có timestamp Zalo)
+    assert records["12C13"]["so_vang_khai_bao"] == 0
+    assert records["12C13"]["hoc_sinh"] == []
+
+    # 5. 12C17: sĩ số 43, 2 học sinh
+    assert records["12C17"]["si_so"] == 43
+    assert [(s["ten"], s["loai"]) for s in records["12C17"]["hoc_sinh"]] == [
+        ("Trúc Vy", None), ("Thụy Quỳnh Anh", "P")
+    ]
+
+    # 6. 12C2: sĩ số 40 vắng0
+    assert records["12C2"]["si_so"] == 40
+    assert records["12C2"]["so_vang_khai_bao"] == 0
+    assert records["12C2"]["hoc_sinh"] == []
+
+    # 7. 12C12: vắng 6
+    assert records["12C12"]["so_vang_khai_bao"] == 6
+    assert len(records["12C12"]["hoc_sinh"]) == 6
+    assert records["12C12"]["hoc_sinh"][0] == {"ten": "Trần Nguyễn Minh Anh", "loai": "P"}
+    assert records["12C12"]["hoc_sinh"][4] == {"ten": "Phạm Hoàng Nguyên", "loai": None}
+
+    # 8. 12C8: vắng / Quốc Bảo(p)
+    assert [(s["ten"], s["loai"]) for s in records["12C8"]["hoc_sinh"]] == [("Quốc Bảo", "P")]
+
+    # 9. 12C18: vắng không phép : (6)... và bỏ qua phần Trễ :(2)...
+    assert records["12C18"]["si_so"] == 32
+    assert records["12C18"]["so_vang_khai_bao"] == 6
+    assert len(records["12C18"]["hoc_sinh"]) == 6
+    assert all(s["loai"] == "K" for s in records["12C18"]["hoc_sinh"])
+    assert [s["ten"] for s in records["12C18"]["hoc_sinh"]] == [
+        "Vũ Tuấn Anh", "Nguyễn Xuân Duy", "Trần Vũ Huy",
+        "Võ Phương Trà My", "Phạm Quyết Tiến", "Phạm Vũ Ngọc Trâm"
+    ]
+    # "Trễ" và danh sách đi trễ không được đưa vào danh sách học sinh hay unrecognized
+    all_names_12c18 = [s["ten"] for s in records["12C18"]["hoc_sinh"]]
+    assert "Trễ" not in all_names_12c18
+    assert "Nguyễn Huy Kiệt" not in all_names_12c18
+    assert "Nguyễn Phan Đăng Khoa" not in all_names_12c18
+    assert records["12C18"]["unrecognized"] == []
+
+    # 10. 12C14: Vắng 1
+    assert records["12C14"]["so_vang_khai_bao"] == 1
+    assert [(s["ten"], s["loai"]) for s in records["12C14"]["hoc_sinh"]] == [("Ngọc Mai", "P")]
+
+    # 11. 12C7: v3 quỳnh như(p),thanh trúc(p),thùy trâm(p)
+    assert records["12C7"]["so_vang_khai_bao"] == 3
+    assert len(records["12C7"]["hoc_sinh"]) == 3
+    assert [(s["ten"], s["loai"]) for s in records["12C7"]["hoc_sinh"]] == [
+        ("Quỳnh Như", "P"), ("Thanh Trúc", "P"), ("Thùy Trâm", "P")
+    ]
+
+    # Không còn timestamp người gửi nào bị coi là rác toàn cục
+    assert parsed["unrecognized"] == []
+
+    # Validate và format thử
+    all_classes = [
+        "10C3", "10C4", "10C5", "10C8", "10C10",
+        "11C1",
+        "12C2", "12C7", "12C8", "12C12", "12C13", "12C14", "12C17", "12C18"
+    ]
+    val = validate(parsed, all_classes)
+    formatted = format_text(val["data"], "Sáng", date(2026, 10, 24), 1)
+
+    assert "11C1 Vắng  2 Tấn Phát (?), Nhật Uy (?)" in formatted
+    assert "10C8 Vắng  0" in formatted
+    assert "10C10 Vắng  0" in formatted
+    assert "10C5 Vắng  1 Quang Thang (K)" in formatted
+    assert "10C4 Vắng  0" in formatted
+    assert "10C3 Vắng  0" in formatted
+    assert "12C13 Vắng  0" in formatted
+    assert "12C17 Vắng  2 Trúc Vy (?), Thụy Quỳnh Anh (P)" in formatted
+    assert "12C2 Vắng  0" in formatted
+    assert "12C12 Vắng  6 Trần Nguyễn Minh Anh (P), Nguyễn Thị Thu Ngân (P), Hồ Trần Minh An (P), Lê Thị Ngọc Huyền (P), Phạm Hoàng Nguyên (?), Võ Quốc Hiếu (?)" in formatted
+    assert "12C8 Vắng  1 Quốc Bảo (P)" in formatted
+    assert "12C18 Vắng  6 Vũ Tuấn Anh (K), Nguyễn Xuân Duy (K), Trần Vũ Huy (K), Võ Phương Trà My (K), Phạm Quyết Tiến (K), Phạm Vũ Ngọc Trâm (K)" in formatted
+    assert "12C14 Vắng  1 Ngọc Mai (P)" in formatted
+    assert "12C7 Vắng  3 Quỳnh Như (P), Thanh Trúc (P), Thùy Trâm (P)" in formatted
+
+
+def test_late_students_are_completely_ignored():
+    # 1. Multi-line Trễ section
+    text_multiline = """12C18 Vắng 1 Tuấn Anh (P)
+Trễ:
+Nguyễn Huy Kiệt
+Nguyễn Phan Đăng Khoa"""
+    res1 = parse_message(text_multiline)
+    assert [(s["ten"], s["loai"]) for s in res1["lop"][0]["hoc_sinh"]] == [("Tuấn Anh", "P")]
+    assert res1["lop"][0]["unrecognized"] == []
+
+    # 2. Inline status (trễ), (đi trễ), (muộn)
+    text_inline = "12C18 Vắng 1: Tuấn Anh (P), Nguyễn Huy Kiệt (trễ), Phan Đăng Khoa (muộn)"
+    res2 = parse_message(text_inline)
+    assert [(s["ten"], s["loai"]) for s in res2["lop"][0]["hoc_sinh"]] == [("Tuấn Anh", "P")]
+
+    # 3. Đi trễ on the same line without separator
+    text_sameline = "10C2 vắng 1 Gia Huy (K) đi trễ: Bảo Long, Minh Quân"
+    res3 = parse_message(text_sameline)
+    assert [(s["ten"], s["loai"]) for s in res3["lop"][0]["hoc_sinh"]] == [("Gia Huy", "K")]
+    assert res3["lop"][0]["unrecognized"] == []
+
+
 
 

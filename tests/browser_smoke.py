@@ -86,6 +86,17 @@ def run():
                 assert left["y"] < control["y"] < right["y"]
             if width == 390:
                 page.screenshot(path=str(OUT / "mobile.png"), full_page=True)
+
+        # Full pasted chat history: verify the actual live server has the new parser.
+        history = (ROOT / "tests" / "fixtures" / "chat_history.txt").read_text(encoding="utf-8")
+        page.locator("#input-text").fill(history)
+        page.get_by_role("button", name="Format", exact=True).click()
+        expect(page.locator("#stat-classes")).to_have_text("25/26")
+        expect(page.locator("#stat-absent")).to_have_text("18")
+        assert "12C6 Vắng  0" in page.locator("#output-text").input_value()
+        assert "11C1 Vắng  2 Tấn Phát (?), Nhật Uy (?)" in page.locator("#output-text").input_value()
+        assert "Quang Vinh" not in page.locator("#output-text").input_value()
+        assert "Quang Vinh" not in page.locator("#warning-list").inner_text()
         page.get_by_role("button", name="Xóa nội dung").click()
         expect(page.locator("#input-text")).to_have_value("")
         expect(page.locator("#output-text")).to_have_value("")

@@ -144,10 +144,10 @@ def prepare_edited_report(payload: ExportRequest) -> dict:
                          and not record.get("unrecognized") and not record.get("parse_notes")
                          and not record.get("overwritten"))
             if unchanged:
-                for key in ("so_vang_khai_bao", "reported", "overwritten", "groups", "unrecognized", "parse_notes"):
+                for key in ("so_vang_khai_bao", "reported", "overwritten", "groups", "unrecognized", "parse_notes", "excluded_late"):
                     record[key] = original[key]
         # Dòng trống theo mẫu có ý nghĩa là chưa báo, kể cả nhập trực tiếp.
-        if not record["hoc_sinh"] and record["so_vang_khai_bao"] is None:
+        if not record["hoc_sinh"] and record["so_vang_khai_bao"] is None and not record.get("excluded_late"):
             record["reported"] = False
     if payload.source_data:
         # Giữ phần ngoài lớp từ đầu vào để Excel không âm thầm bỏ mất cảnh báo.

@@ -13,7 +13,7 @@ def class_sort_key(record: dict) -> tuple:
 
 
 def absence_count(record: dict) -> int | None:
-    if record["hoc_sinh"]:
+    if record["hoc_sinh"] or record.get("excluded_late"):
         return len(record["hoc_sinh"])
     # Không biến báo thiếu tên thành Vắng 0: giữ số khai báo, kèm cảnh báo.
     return record["so_vang_khai_bao"]
@@ -40,7 +40,7 @@ def validate(data: dict, configured_classes: list[str]) -> dict:
         declared = record["so_vang_khai_bao"]
         if not record.get("reported", True):
             warn("missing", "Chưa báo.", code)
-        elif not count and declared is None:
+        elif not count and declared is None and not record.get("excluded_late"):
             warn("no_information", "Có mã lớp nhưng chưa có thông tin vắng.", code)
         if code not in classes:
             warn("unknown_class", "Mã lớp không có trong config.json; kiểm tra lại.", code)
@@ -52,7 +52,7 @@ def validate(data: dict, configured_classes: list[str]) -> dict:
         if record.get("overwritten", 0):
             warn("overwritten", f"Đã ghi đè {record['overwritten']} lần; dùng lần báo cuối cùng.", code)
         for group in record.get("groups", []):
-            if group["khai_bao"] != group["thuc_te"]:
+            if group["khai_bao"] is not None and group["khai_bao"] != group["thuc_te"]:
                 warn("group_mismatch", f"Nhóm {group['khai_bao']}{group['loai']} có {group['thuc_te']} tên.", code)
         for fragment in record.get("unrecognized", []):
             warn("unrecognized", "Đoạn chưa nhận diện được; kiểm tra bản gốc.", code, fragment)

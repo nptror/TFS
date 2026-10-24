@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 def normalize_class(value: str) -> str:
-    match = re.fullmatch(r"(?:lớp\s*)?(10|11|12)\s*([a-z])\s*(\d{1,3})", value.strip(), re.I)
+    match = re.fullmatch(r"(?:lớp\s*[:=]?\s*)?(10|11|12)\s*([a-z])\s*(\d{1,3})", value.strip(), re.I)
     if not match or int(match[3]) == 0:
         raise ValueError("Mã lớp phải có dạng 10C2, 11C3 hoặc 12C9.")
     return f"{match[1]}{match[2].upper()}{int(match[3])}"
@@ -60,7 +60,7 @@ class Extraction(BaseModel):
 
 class GroupCount(BaseModel):
     loai: Literal["P", "K"]
-    khai_bao: int = Field(ge=0, le=10000)
+    khai_bao: int | None = Field(ge=0, le=10000)
     thuc_te: int = Field(ge=0, le=1000)
 
 
@@ -71,6 +71,7 @@ class ParsedClass(ClassRecord):
     groups: list[GroupCount] = Field(default_factory=list)
     unrecognized: list[str] = Field(default_factory=list)
     parse_notes: list[str] = Field(default_factory=list)
+    excluded_late: list[str] = Field(default_factory=list)
 
 
 class ParsedReport(BaseModel):

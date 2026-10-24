@@ -1,8 +1,8 @@
-"""Parser regex thuần, không I/O, không gọi AI.
+"""Parser regex có trạng thái cho tin nhắn báo vắng.
 
-parse_message(text) -> dict có khóa `lop`, tương thích schema đề bài.
-Metadata bổ sung giữ số đếm nhóm, nội dung không nhận diện và lần ghi đè.
-Không đoán ranh giới tên khi không có dấu phẩy, xuống dòng hoặc (P)/(K).
+Regex chỉ nhận token: mã lớp, số đếm, số thứ tự, trạng thái, phân cách.
+Trạng thái của khối quyết định token thuộc danh sách vắng hay đi trễ.
+Không xóa cả đuôi chuỗi khi gặp "trễ", không suy đoán P/K.
 """
 
 import re
@@ -11,55 +11,80 @@ import unicodedata
 from .models import normalize_class, normalize_name
 
 
-CLASS_RE = re.compile(r"(?<!\w)(?:lớp\s*[:=]?\s*)?(10|11|12)\s*([a-z])\s*(\d{1,3})(?!\w)", re.I)
+# Cho phép mã lớp dính đúng từ khóa đã biết, không nhận nhầm "12C6foobar".
+CLASS_RE = re.compile(
+    r"(?<!\w)(?:lớp\s*[:=]?\s*)?(10|11|12)\s*([a-z])\s*(\d{1,3})"
+    r"(?=$|[^\w]|(?:vắng|văng|vang|vắg)(?![^\W\d_])|v(?=\s*[:=]?\s*\d))", re.I,
+)
 SIZE_RE = re.compile(r"(?<!\w)(?:sĩ\s*số|si\s*so|ss)\s*[:=]?\s*(\d+)(?!\d)", re.I)
-FULL_ATTENDANCE_RE = re.compile(
-    r"(?<!\w)(?:"
+ABSENCE_PATTERN = (
+    r"(?<!\w)(?:báo\s*vắng|báo\s*vang|ds\s*vắng|danh\s*sách\s*vắng|"
+    r"vắng|văng|vang|vắg|vg|v)(?![^\W\d_])\s*[:=]?\s*"
+)
+FULL_ATTENDANCE_PATTERN = (
+    r"(?:^|(?<=\n))[ \t:=-]*(?:"
     r"đi\s*đủ|di\s*du|đầy\s*đủ|day\s*du|có\s*mặt\s*đủ|hiện\s*diện\s*đủ|"
     r"đủ\s*(?:sĩ\s*số|ss)|(?:sĩ\s*số|ss)\s*đủ|"
-    r"không\s*vắng|ko\s*vắng|k\s*vắng|khong\s*vang|không\s*ai\s*vắng|"
-    r"đủ|du"
-    r")(?:\s*(?:ạ|a|nha|nhé|nhe|cả))?(?!\w)",
-    re.I,
+    r"không\s*ai\s*vắng|không\s*vắng|ko\s*vắng|k\s*vắng|khong\s*vang|đủ|du"
+    r")(?!\w)(?:[ \t]+(?:ạ|a|nha|nhé|nhe|cả)(?!\w))?"
 )
-KEYWORD_RE = re.compile(
-    r"(?<!\w)(?:báo\s*vắng|báo\s*vang|ds\s*vắng|danh\s*sách\s*vắng)(?:\s*[:=])?"
-    r"|(?<!\w)(?:vắng|văng|vang|vắg|vg)(?:\s*[:=])?"
-    r"|(?<!\w)v\s*[:=]"
-    r"|(?<!\w)v\s+(?=\d)"
-    r"|(?<!\w)lớp(?:\s*[:=])?",
-    re.I,
+CHAT_HEADER_RE = re.compile(
+    r"^[ \t]*(?:"
+    r"\[\s*\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?(?:[ ,T]+\d{1,2}:\d{1,2}(?::\d{1,2})?)?\s*\]"
+    r"|\[\s*\d{1,2}:\d{1,2}(?::\d{1,2})?(?:[ ,]+\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?)?\s*\]"
+    r"|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}[ ,T]+\d{1,2}:\d{1,2}(?::\d{1,2})?[ \t]*[-:]?"
+    r")[ \t]*", re.I | re.M,
 )
-# Prefix groups must be distinguished from a standalone total before consuming digits.
+LATE_PATTERN = (
+    r"(?<!\w)(?:học\s*sinh\s*đi\s*trễ|hs\s*đi\s*trễ|đi\s*trễ|"
+    r"đến\s*muộn|vào\s*trễ|trễ|muộn)(?![^\W\d_])\s*[:=]?\s*"
+)
 TOKEN_RE = re.compile(
-    r"(?P<group>(?<!\w)(?P<count>\d+)\s*(?P<kind>[PK])(?!\w))"
-    r"|(?P<status>\(\s*(?P<individual>[^)]+)\s*\))"
-    r"|(?P<separator>[,;\n]+)", re.I
+    # Số trong ngoặc đứng trước status; "(3)" là số đếm, không phải trạng thái.
+    r"(?P<paren_count>\(\s*(?P<paren_number>\d+)\s*\))"
+    r"|(?P<status>\(\s*(?P<individual>[^()\n]+?)\s*\))"
+    r"|(?P<full>" + FULL_ATTENDANCE_PATTERN + r")"
+    r"|(?P<absence>" + ABSENCE_PATTERN + r")"
+    r"|(?P<late>" + LATE_PATTERN + r")"
+    r"|(?P<group>(?<!\w)(?P<group_count>\d+)\s*(?P<group_kind>[PK])(?:\s*[:=])?(?!\w))"
+    r"|(?P<group_phrase>(?<!\w)(?P<phrase_kind>"
+    r"không\s*phép|khong\s*phep|ko\s*phép|ko\s*phep|k\s*phép|k\s*phep|kp|"
+    r"có\s*phép|co\s*phep|c\s*phép|cp)(?!\w)[ \t]*[:=]?[ \t]*"
+    r"(?:\(\s*(?P<phrase_count1>\d+)\s*\)|(?P<phrase_count2>\d+)(?![\w]))?)"
+    r"|(?P<number_token>(?<!\w)(?P<number>\d+)(?!\w)(?P<ordinal>[.)/\-])?)"
+    r"|(?P<separator>[,;\n]+)",
+    re.I,
 )
-TOTAL_RE = re.compile(r"(?<!\w)\d+(?!\w)")
-NAME_RE = re.compile(r"[^\W\d_]+(?:[\s'’\-][^\W\d_]+)*", re.UNICODE)
-
+# Dấu chấm giữa chữ cho tên viết tắt như "h.l bảo ngọc"; không tự mở rộng họ tên.
+NAME_RE = re.compile(r"[^\W\d_]+\.?(?:[\s'’.\-]+[^\W\d_]+\.?)*", re.UNICODE)
+META_LINE_RE = re.compile(r"^\s*(?:đoạn này|đây là dữ liệu|dữ liệu mới|chỉ lấy lớp)\b", re.I)
+TRIM = " \t\r\n:=-•–—\"'“”‘’"
 COURTESY_WORDS = {
     "ạ", "a", "dạ", "da", "dạ em gửi", "dạ gửi", "em gửi", "gửi ạ", "gửi",
-    "báo cáo", "xin báo cáo", "em xin báo cáo", "dạ báo cáo",
-    "nhé", "nha", "nhe", "ạ nha", "ạ nhé", "nhé ạ",
-    "cô ơi", "thầy ơi", "dạ cô", "dạ thầy",
-    "cảm ơn", "cam on", "thanks", "thank",
+    "báo cáo", "xin báo cáo", "em xin báo cáo", "dạ báo cáo", "kính gửi",
+    "nhé", "nha", "nhe", "ạ nha", "ạ nhé", "nhé ạ", "cô ơi", "thầy ơi",
+    "dạ cô", "dạ thầy", "cảm ơn", "cam on", "thanks", "thank",
 }
 COURTESY_RE = re.compile(
-    r"^(?:dạ\s*)?(?:em\s*)?(?:xin\s*)?(?:gửi|báo\s*cáo|báo\s*vắng)?\s*(?:ạ|a|nha|nhé|nhe)?$",
-    re.I,
+    r"^(?:dạ\s*)?(?:em\s*)?(?:xin\s*)?(?:gửi|báo\s*cáo|báo\s*vắng)?"
+    r"\s*(?:ạ|a|nha|nhé|nhe)?$", re.I,
 )
+
+
+def is_courtesy(text: str) -> bool:
+    return text.lower() in COURTESY_WORDS or bool(COURTESY_RE.fullmatch(text))
 
 
 def normalize_status(raw: str | None) -> str | None:
-    if not raw:
-        return None
-    cleaned = raw.strip().upper()
+    cleaned = " ".join((raw or "").split()).upper()
     if cleaned in ("P", "CP", "CÓ PHÉP", "CO PHEP", "P."):
         return "P"
     if cleaned in ("K", "KP", "KO", "KHÔNG PHÉP", "KHONG PHEP", "K."):
         return "K"
+    if re.fullmatch(r"T(?:\s*\d+\s*(?:T|TIẾT|TIET))?", cleaned) or cleaned in (
+        "TRỄ", "TRE", "ĐI TRỄ", "DI TRE", "MUỘN", "MUON", "ĐẾN MUỘN", "DEN MUON",
+    ):
+        return "LATE"
     return None
 
 
@@ -68,6 +93,7 @@ def _parse_block(code: str, raw: str, body: str) -> dict:
         "ten_lop": code, "si_so": None, "so_vang_khai_bao": None,
         "hoc_sinh": [], "raw": raw.strip(), "reported": True,
         "overwritten": 0, "groups": [], "unrecognized": [], "parse_notes": [],
+        "excluded_late": [],
     }
     sizes = SIZE_RE.findall(body)
     if sizes:
@@ -75,54 +101,85 @@ def _parse_block(code: str, raw: str, body: str) -> dict:
         if len(set(sizes)) > 1:
             record["parse_notes"].append("Có nhiều sĩ số khác nhau; dùng số cuối cùng.")
     body = SIZE_RE.sub(" ", body)
-    has_full_attendance = bool(FULL_ATTENDANCE_RE.search(body))
-    body = FULL_ATTENDANCE_RE.sub(" ", body)
-    body = KEYWORD_RE.sub(" ", body)
+    # Tách "vắng2"/"v0" trước khi quét số: lookbehind của token số vẫn
+    # nhìn ký tự gốc dù token từ khóa đã được tiêu thụ.
+    body = re.sub(ABSENCE_PATTERN, lambda match: match[0] + " ", body, flags=re.I)
     group_index = None
-    pending = ""
+    late_mode = False
+    awaiting_total = False
     declarations = []
+    pending = ""
 
-    def flush(explicit_status=None, has_status=False):
-        nonlocal pending
-        fragment = pending.strip(" \t\r\n:=-•–—")
+    def flush(explicit_status=None, has_status=False, raw_status=None):
+        nonlocal pending, awaiting_total
+        fragment = pending.strip(TRIM)
         pending = ""
         if not fragment:
             if has_status:
-                record["unrecognized"].append(f"({explicit_status or '?'}) không có tên")
+                record["unrecognized"].append(f"({raw_status or '?'}) không có tên")
             return
-        if not has_status:
-            if fragment.lower() in COURTESY_WORDS or COURTESY_RE.fullmatch(fragment):
-                return
-        # Numbers here are NOT part of a group prefix or sĩ số (already tokenized).
-        totals = TOTAL_RE.findall(fragment)
-        declarations.extend(int(value) for value in totals)
-        fragment = TOTAL_RE.sub(" ", fragment).strip(" \t:=-•–—")
-        if not fragment:
+        if not has_status and is_courtesy(fragment):
             return
-        if not has_status:
-            if fragment.lower() in COURTESY_WORDS or COURTESY_RE.fullmatch(fragment):
-                return
         name = normalize_name(fragment)
         if not NAME_RE.fullmatch(name):
             record["unrecognized"].append(fragment)
             return
+        awaiting_total = False
+        if explicit_status == "LATE" or late_mode:
+            record["excluded_late"].append(name)
+            return
         inherited = record["groups"][group_index]["loai"] if group_index is not None else None
         record["hoc_sinh"].append({"ten": name, "loai": explicit_status if has_status else inherited})
+        if has_status and explicit_status is None and raw_status and raw_status.strip() != "?":
+            record["parse_notes"].append(f"Trạng thái ({raw_status.strip()}) của {name} chưa rõ; cần kiểm tra.")
         if group_index is not None:
             record["groups"][group_index]["thuc_te"] += 1
 
     cursor = 0
     for token in TOKEN_RE.finditer(body):
         pending += body[cursor:token.start()]
-        if token["group"]:
-            flush()
-            record["groups"].append({
-                "loai": token["kind"].upper(), "khai_bao": int(token["count"]), "thuc_te": 0,
-            })
-            group_index = len(record["groups"]) - 1
-        elif token["status"]:
+        if token["status"]:
             status = normalize_status(token["individual"])
-            flush(status, has_status=True)
+            flush(status, has_status=True, raw_status=token["individual"])
+        elif token["full"]:
+            flush()
+            declarations.append(0)
+            awaiting_total = False
+            late_mode = False
+            group_index = None
+        elif token["absence"]:
+            flush()
+            late_mode = False
+            awaiting_total = True
+            group_index = None
+        elif token["late"]:
+            flush()
+            late_mode = True
+            group_index = None
+        elif token["group"] or token["group_phrase"]:
+            flush()
+            if token["group"]:
+                kind, count = token["group_kind"].upper(), int(token["group_count"])
+            else:
+                kind = "K" if token["phrase_kind"].lower().startswith("k") else "P"
+                count_text = token["phrase_count1"] or token["phrase_count2"]
+                count = int(count_text) if count_text is not None else None
+            if not late_mode:
+                record["groups"].append({"loai": kind, "khai_bao": count, "thuc_te": 0})
+                group_index = len(record["groups"]) - 1
+            awaiting_total = False
+        elif token["number_token"] or token["paren_count"]:
+            flush()
+            number = int(token["number"] or token["paren_number"])
+            if late_mode:
+                # Số trễ/số thứ tự không được nhập vào tổng vắng.
+                pass
+            elif not token["ordinal"] and (
+                awaiting_total or (not declarations and not record["hoc_sinh"] and not record["groups"])
+            ):
+                declarations.append(number)
+                awaiting_total = False
+            # Những số còn lại là số thứ tự: chỉ tách tên, không cộng vào tổng.
         else:
             flush()
         cursor = token.end()
@@ -130,14 +187,12 @@ def _parse_block(code: str, raw: str, body: str) -> dict:
     flush()
     if declarations:
         record["so_vang_khai_bao"] = declarations[0]
-        if len(declarations) > 1:
+        if len(set(declarations)) > 1:
             record["parse_notes"].append(
                 "Có nhiều số vắng độc lập (" + ", ".join(map(str, declarations)) + "); cần kiểm tra."
             )
-    elif record["groups"]:
+    elif record["groups"] and all(group["khai_bao"] is not None for group in record["groups"]):
         record["so_vang_khai_bao"] = sum(group["khai_bao"] for group in record["groups"])
-    elif has_full_attendance and not record["hoc_sinh"]:
-        record["so_vang_khai_bao"] = 0
     return record
 
 
@@ -153,37 +208,47 @@ def deduplicate(records: list[dict]) -> list[dict]:
     return list(latest.values())
 
 
+def _chat_messages(text: str):
+    """Giữ ranh giới tin nhắn: lời nhắn không có lớp không dính vào lớp trước."""
+    for index, message in enumerate(CHAT_HEADER_RE.split(text)):
+        if index:
+            first_line = message.split("\n", 1)[0]
+            colon = first_line.find(":")
+            if colon >= 0 and not CLASS_RE.search(first_line[:colon]):
+                message = message[colon + 1:].lstrip()
+        yield message
+
+
 def parse_message(text: str) -> dict:
     text = unicodedata.normalize("NFC", text).replace("\r\n", "\n").replace("\r", "\n")
-    matches = list(CLASS_RE.finditer(text))
     result = {"lop": [], "unrecognized": []}
-    if not matches:
-        if text.strip():
-            result["unrecognized"].append(text.strip())
-        return result
-    prefix = text[:matches[0].start()].strip()
-    if prefix:
-        result["unrecognized"].append(prefix)
-    for index, match in enumerate(matches):
-        next_start = matches[index + 1].start() if index + 1 < len(matches) else len(text)
-        end = next_start
-        if index + 1 < len(matches):
-            last_nl = text.rfind("\n", match.end(), next_start)
-            if last_nl != -1:
-                between = text[last_nl + 1:next_start].strip()
-                if between and (
-                    between.lower() in COURTESY_WORDS
-                    or COURTESY_RE.fullmatch(between)
-                    or re.search(r"\b(?:dạ|em\s*gửi|gửi|báo\s*cáo|báo\s*vắng|kính\s*gửi)\b", between, re.I)
-                ):
-                    end = last_nl
-        raw = text[match.start():end]
-        try:
-            code = normalize_class(f"{match[1]}{match[2]}{match[3]}")
-        except ValueError:
-            result["unrecognized"].append(raw.strip())
-            continue
-        result["lop"].append(_parse_block(code, raw, text[match.end():end]))
+    for message in _chat_messages(text):
+        lines = []
+        for line in message.splitlines():
+            if META_LINE_RE.match(line):
+                result["unrecognized"].append(line.strip())
+            else:
+                lines.append(line)
+        message = "\n".join(lines)
+        matches = list(CLASS_RE.finditer(message))
+        prefix = message[:matches[0].start()] if matches else message
+        if prefix.strip(TRIM) and not is_courtesy(prefix.strip(TRIM)):
+            result["unrecognized"].append(prefix.strip())
+        for index, match in enumerate(matches):
+            end = matches[index + 1].start() if index + 1 < len(matches) else len(message)
+            # "Dạ em gửi 10C6 ạ" có phần chào trước mã lớp, không phải tên lớp trước.
+            if index + 1 < len(matches):
+                last_newline = message.rfind("\n", match.end(), end)
+                between = message[last_newline + 1:end].strip(TRIM) if last_newline >= 0 else ""
+                if between and is_courtesy(between):
+                    end = last_newline
+            raw = message[match.start():end]
+            try:
+                code = normalize_class(f"{match[1]}{match[2]}{match[3]}")
+            except ValueError:
+                result["unrecognized"].append(raw.strip())
+                continue
+            result["lop"].append(_parse_block(code, raw, message[match.end():end]))
     result["lop"] = deduplicate(result["lop"])
     return result
 

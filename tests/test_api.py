@@ -1,5 +1,6 @@
 from io import BytesIO
 import json
+from pathlib import Path
 
 from openpyxl import load_workbook
 import pytest
@@ -129,4 +130,45 @@ def test_bad_config_reports_clear_error(client, monkeypatch, tmp_path):
 def test_export_invalid_header_and_missing_classes(client):
     assert client.post("/api/export", json={**SESSION, "text": "không có lớp"}).status_code == 400
     assert client.post("/api/export", json={**SESSION, "text": "Sáng thứ 2, ngày 31/02/2026, ca 1:\n12C9 vắng 0"}).status_code == 422
+
+
+def test_extended_history_through_format_preview_and_excel(client):
+    text = (Path(__file__).parent / "fixtures" / "chat_history.txt").read_text(encoding="utf-8")
+    response = format_request(client, text)
+    assert response.status_code == 200
+    result = response.json()
+    assert result["summary"]["reported"] == 25
+    assert "12C6 Vắng  0" in result["text"]
+    assert "11C1 Vắng  2 Tấn Phát (?), Nhật Uy (?)" in result["text"]
+    assert "Quang Vinh" not in result["text"]
+    payload = export_payload(result)
+    preview = client.post("/api/preview", json=payload)
+    assert preview.status_code == 200
+    assert preview.json()["text"] == result["text"]
+    response = client.post("/api/export", json=payload)
+    assert response.status_code == 200
+    sheet = load_workbook(BytesIO(response.content)).active
+    row = class_row(sheet, "12C14")
+    assert row[2].value == 0
+    assert "Quang Vinh" not in (row[6].value or "")
+    assert "đi trễ" not in (row[6].value or "")
+    assert class_row(sheet, "12C10")[1].value == 43
+
+
+def test_all_late_students_export_as_zero_but_keep_discrepancy(client):
+    result = format_request(client, "12C1 Vắng 2 An(T), Bình(T 1t)").json()
+    assert "12C1 Vắng  0" in result["text"]
+    preview = client.post("/api/preview", json=export_payload(result))
+    assert preview.status_code == 200
+    assert "12C1 Vắng  0" in preview.json()["text"]
+    codes = {w["code"] for w in preview.json()["warnings"] if w["class_name"] == "12C1"}
+    assert "count_mismatch" in codes
+    assert "late_excluded" not in codes
+    assert all("Bình" not in warning["message"] for warning in preview.json()["warnings"])
+
+
+def test_group_without_count_formats_and_exports(client):
+    result = format_request(client, "12C18 Vắng không phép: An, Bình").json()
+    assert "12C18 Vắng  2 An (K), Bình (K)" in result["text"]
+    assert client.post("/api/export", json=export_payload(result)).status_code == 200
 

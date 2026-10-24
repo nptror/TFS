@@ -100,18 +100,37 @@ có cảnh báo chưa có trong config.
 ## Quy tắc và các trường hợp cần kiểm tra
 
 - Chuẩn hóa `Lớp 12c9`, `12 C9`, `10 C 6` thành mã lớp viết hoa.
+- Nhận cả mã lớp dính từ khóa: `12c6vắng 0`, `12c6v 0`, `12c6v0`.
+- Bỏ thời gian và tên người gửi trong tin xuất từ chat như
+  `[24/10/2026 07:19:35] Nguyễn Quốc Khánh: 12c13 vắng 0`. Ranh giới tin nhắn
+  vẫn được giữ để tin không có lớp không dính vào tên học sinh của lớp trước.
 - Mỗi mã lớp mở một khối đến mã lớp kế tiếp, kể cả nhiều dòng.
 - Nhận `vắng`, `văng`, `vang`; tách `sĩ số40`, `sĩ số 40`, `si so 40`, `ss 40`.
+- Nhận `vắng2`, `vắng0`, `v3`, `v 1`, `v:0`, `vắng (3)`; `đủ`, `đi đủ`,
+  `đủ ạ` được hiểu là 0 vắng. Không xóa các từ giống từ khóa nằm trong họ tên.
+- Tách số thứ tự khỏi tổng khai báo: `11c1 vắng2 1 tấn phát 2. Nhật uy`
+  thành hai tên Tấn Phát và Nhật Uy, đều chưa rõ P/K.
 - Tách tên theo dấu phẩy, chấm phẩy, xuống dòng hoặc ngay sau `(P)/(K)/(?)`.
 - Nhóm `4K ... 1P ...` duy trì trạng thái qua các dòng; trạng thái sau tên ưu tiên
   hơn trạng thái nhóm. `(?)` giữ trạng thái chưa rõ, kể cả trong nhóm P/K.
+- Nhận nhóm viết đầy đủ: `Vắng không phép: (6) ...` hoặc `Vắng có phép: ...`.
+  Có thể bỏ số đếm nhóm; ứng dụng chỉ đối chiếu số đếm khi thực sự được khai báo.
+- Phần `Trễ: (2) ...`, `trễ 1 ...` và các tên có `(T)`, `(t)`, `(T 1t)`,
+  `(T 2t)`, `(trễ)`, `(muộn)` được bỏ qua hoàn toàn khi xuất báo cáo:
+  không nằm trong danh sách vắng, không hiện trong cảnh báo hay Ghi chú Excel.
+  Nếu khai báo `Vắng 2` nhưng cả hai tên đều `(T)`, kết quả là 0 vắng kèm cảnh báo
+  chênh số; không tự chuyển T thành K. Ký hiệu lạ như `(X)` vẫn giữ tên với `(?)`
+  và cảnh báo ký hiệu gốc.
 - Lớp trùng lấy lần cuối, kèm cảnh báo đã ghi đè.
+  “Lần cuối” là thứ tự trong nội dung dán, không phải thời gian trong dấu ngoặc.
+  Khi dán lịch sử nhiều ngày, ứng dụng không tự lọc ngày hoặc sắp xếp lại tin nhắn.
 - Khi có tên, số vắng đầu ra bằng số tên. Nếu số khai báo khác số tên, cảnh báo
   giữ nguyên số khai báo để đối chiếu. Nếu chỉ có `vắng 3` mà không có tên,
   vẫn giữ số 3 và cảnh báo thiếu tên, không đổi thành 0.
 - Khi không có số lẫn tên, để trống số vắng. `Vắng 0` chỉ dùng khi thực sự khai báo 0.
 - Không đoán P/K. Tên chưa rõ loại được ghi `(?)` và đưa vào cảnh báo.
 - Tên viết hoa đầu từ; dấu tiếng Việt được chuẩn hóa Unicode NFC.
+  Tên viết tắt như `h.l bảo ngọc` thành `H.L Bảo Ngọc`, không đoán tên đầy đủ.
 - Phần trước mã lớp đầu tiên và các đoạn sai cú pháp được giữ trong cảnh báo.
 - Một chuỗi chỉ có chữ, nằm trong khối lớp, có thể là tên hoặc câu bình luận.
   Regex không tự suy đoán ngữ nghĩa; tên không có P/K sẽ được cảnh báo để kiểm tra.
