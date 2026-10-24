@@ -94,8 +94,8 @@ Sửa `config.json` để cập nhật các lớp cần báo:
 Backend đọc lại config mỗi lần xử lý, không cần khởi động lại. Tải lại trang để
 cập nhật danh sách hiển thị bên dưới. Lớp thiếu báo cáo vẫn xuất hiện với số vắng
 để trống, kèm cảnh báo **Chưa báo**. Mã ngoài danh sách vẫn được giữ nhưng có cảnh báo.
-Dùng `{"classes": []}` nếu không có danh sách cố định; khi đó mọi lớp nhập vào đều
-có cảnh báo chưa có trong config.
+Dùng `{"classes": []}` (mặc định) nếu không có danh sách cố định; khi đó chỉ các lớp
+bạn dán vào được báo cáo, không thêm lớp thiếu và không cảnh báo mã lạ.
 
 ## Quy tắc và các trường hợp cần kiểm tra
 

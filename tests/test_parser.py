@@ -27,13 +27,13 @@ def sample_records():
 
 @pytest.mark.parametrize("code,expected", [
     ("12C9", [("Nhật Huy", "P"), ("Tuấn Huy", "P"), ("Duy Hải", "K")]),
-    ("12C11", [("Phương Thảo", None)]),
+    ("12C11", [("Phương Thảo", "K")]),
     ("12C3", [("Tuấn Anh", "K"), ("Minh Trí", "P"), ("Khánh Nguyên", "K"),
               ("Thanh Huy", "P"), ("Trung Nghĩa", "P"), ("Duy Thành", "P")]),
     ("12C2", []),
     ("10C6", [("Thanh Luân", "K"), ("Minh Nhật", "K"), ("Gia Tuấn", "K"), ("Quốc Huy", "K"), ("Huy Hoàng", "P")]),
     ("10C5", [("Quang Thanh", "K")]),
-    ("12C17", [("Trúc Vy", None), ("Mai Phương Uyên", "P"), ("Thu Hương", "P")]),
+    ("12C17", [("Trúc Vy", "K"), ("Mai Phương Uyên", "P"), ("Thu Hương", "P")]),
 ])
 def test_every_sample_class(sample_records, code, expected):
     record = sample_records[code]
@@ -46,7 +46,7 @@ def test_sample_size_and_warning_details(sample_records):
     assert sample_records["10C6"]["so_vang_khai_bao"] == 5
     result = validate(parse_message(SAMPLE), list(sample_records))
     unclear = {w["class_name"] for w in result["warnings"] if w["code"] == "unknown_status"}
-    assert unclear == {"12C11", "12C17"}
+    assert unclear == set()
     assert any(w["raw"] == "user nhập" for w in result["warnings"])
     assert not any(w["code"] == "count_mismatch" for w in result["warnings"])
 
@@ -60,8 +60,8 @@ def test_exact_sample_output(sample_records):
 12C2 Vắng  0
 12C3 Vắng  6 Tuấn Anh (K), Minh Trí (P), Khánh Nguyên (K), Thanh Huy (P), Trung Nghĩa (P), Duy Thành (P)
 12C9 Vắng  3 Nhật Huy (P), Tuấn Huy (P), Duy Hải (K)
-12C11 Vắng  1 Phương Thảo (?)
-12C17 Vắng  3 Trúc Vy (?), Mai Phương Uyên (P), Thu Hương (P)"""
+12C11 Vắng  1 Phương Thảo (K)
+12C17 Vắng  3 Trúc Vy (K), Mai Phương Uyên (P), Thu Hương (P)"""
 
 
 @pytest.mark.parametrize("size", ["sĩ số 40", "sĩ số40", "ss 40", "si so 40", "SĨ SỐ:40"])
@@ -96,9 +96,9 @@ def test_mismatch_unknown_and_no_information():
     data = parse_message("12C9 vắng 3 An(P), Bình\n10C10 Vắng\n11C1 vắng 2")
     result = validate(data, ["12C9", "10C10", "10C2"])
     codes = {w["code"] for w in result["warnings"]}
-    assert {"count_mismatch", "unknown_status", "no_information", "missing", "unknown_class"} <= codes
+    assert {"count_mismatch", "no_information", "missing", "unknown_class"} <= codes
     lines = format_text(result["data"], "Sáng", date(2026, 10, 25), 2).splitlines()
-    assert "12C9 Vắng  2 An (P), Bình (?)" in lines
+    assert "12C9 Vắng  2 An (P), Bình (K)" in lines
     assert "11C1 Vắng  2" in lines  # thiếu tên không được biến thành 0
     assert "10C2 Vắng  " in lines
     assert "10C10 Vắng  " in lines
@@ -207,7 +207,7 @@ Dạ em gửi 10c6 ạ
     assert "10C4 Vắng  1 Thịnh (P)" in formatted
     assert "10C8 Vắng  0" in formatted
     assert "12C16 Vắng  1 Lưu Văn Phát (P)" in formatted
-    assert "12C17 Vắng  3 Trúc Vy (?), Mai Phương Uyên (P), Thu Hương (P)" in formatted
+    assert "12C17 Vắng  3 Trúc Vy (K), Mai Phương Uyên (P), Thu Hương (P)" in formatted
     assert "12C19 Vắng  0" in formatted
 
     # Cảnh báo không còn các cảnh báo sai/rác
@@ -259,7 +259,7 @@ Ngọc Mai (P)
     # 1. 11C1: vắng2 + số thứ tự 1 tấn phát 2. Nhật uy
     assert records["11C1"]["so_vang_khai_bao"] == 2
     assert [(s["ten"], s["loai"]) for s in records["11C1"]["hoc_sinh"]] == [
-        ("Tấn Phát", None), ("Nhật Uy", None)
+        ("Tấn Phát", "K"), ("Nhật Uy", "K")
     ]
     assert records["11C1"]["unrecognized"] == []
     assert records["11C1"]["parse_notes"] == []
@@ -280,7 +280,7 @@ Ngọc Mai (P)
     # 5. 12C17: sĩ số 43, 2 học sinh
     assert records["12C17"]["si_so"] == 43
     assert [(s["ten"], s["loai"]) for s in records["12C17"]["hoc_sinh"]] == [
-        ("Trúc Vy", None), ("Thụy Quỳnh Anh", "P")
+        ("Trúc Vy", "K"), ("Thụy Quỳnh Anh", "P")
     ]
 
     # 6. 12C2: sĩ số 40 vắng0
@@ -292,7 +292,7 @@ Ngọc Mai (P)
     assert records["12C12"]["so_vang_khai_bao"] == 6
     assert len(records["12C12"]["hoc_sinh"]) == 6
     assert records["12C12"]["hoc_sinh"][0] == {"ten": "Trần Nguyễn Minh Anh", "loai": "P"}
-    assert records["12C12"]["hoc_sinh"][4] == {"ten": "Phạm Hoàng Nguyên", "loai": None}
+    assert records["12C12"]["hoc_sinh"][4] == {"ten": "Phạm Hoàng Nguyên", "loai": "K"}
 
     # 8. 12C8: vắng / Quốc Bảo(p)
     assert [(s["ten"], s["loai"]) for s in records["12C8"]["hoc_sinh"]] == [("Quốc Bảo", "P")]
@@ -336,16 +336,16 @@ Ngọc Mai (P)
     val = validate(parsed, all_classes)
     formatted = format_text(val["data"], "Sáng", date(2026, 10, 24), 1)
 
-    assert "11C1 Vắng  2 Tấn Phát (?), Nhật Uy (?)" in formatted
+    assert "11C1 Vắng  2 Tấn Phát (K), Nhật Uy (K)" in formatted
     assert "10C8 Vắng  0" in formatted
     assert "10C10 Vắng  0" in formatted
     assert "10C5 Vắng  1 Quang Thang (K)" in formatted
     assert "10C4 Vắng  0" in formatted
     assert "10C3 Vắng  0" in formatted
     assert "12C13 Vắng  0" in formatted
-    assert "12C17 Vắng  2 Trúc Vy (?), Thụy Quỳnh Anh (P)" in formatted
+    assert "12C17 Vắng  2 Trúc Vy (K), Thụy Quỳnh Anh (P)" in formatted
     assert "12C2 Vắng  0" in formatted
-    assert "12C12 Vắng  6 Trần Nguyễn Minh Anh (P), Nguyễn Thị Thu Ngân (P), Hồ Trần Minh An (P), Lê Thị Ngọc Huyền (P), Phạm Hoàng Nguyên (?), Võ Quốc Hiếu (?)" in formatted
+    assert "12C12 Vắng  6 Trần Nguyễn Minh Anh (P), Nguyễn Thị Thu Ngân (P), Hồ Trần Minh An (P), Lê Thị Ngọc Huyền (P), Phạm Hoàng Nguyên (K), Võ Quốc Hiếu (K)" in formatted
     assert "12C8 Vắng  1 Quốc Bảo (P)" in formatted
     assert "12C18 Vắng  6 Vũ Tuấn Anh (K), Nguyễn Xuân Duy (K), Trần Vũ Huy (K), Võ Phương Trà My (K), Phạm Quyết Tiến (K), Phạm Vũ Ngọc Trâm (K)" in formatted
     assert "12C14 Vắng  1 Ngọc Mai (P)" in formatted

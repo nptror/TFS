@@ -39,6 +39,14 @@ LATE_PATTERN = (
     r"(?<!\w)(?:học\s*sinh\s*đi\s*trễ|hs\s*đi\s*trễ|đi\s*trễ|"
     r"đến\s*muộn|vào\s*trễ|trễ|muộn)(?![^\W\d_])\s*[:=]?\s*"
 )
+# Từ đệm trong câu nói ("bạn ạ. Gia Vỹ"), không phải một phần tên. Không gồm "nha" vì là tên thật.
+FILLER_RE = re.compile(r"(?<!\w)(?:bạn|ạ|dạ|nhé|nhe)(?!\w)[.!]*", re.I)
+# "Tên K" / "Tên p": chữ P/K đơn lẻ cuối tên là trạng thái.
+TRAILING_STATUS_RE = re.compile(r"\s+([PK])$", re.I)
+ARRIVED_PATTERN = (
+    r"(?<!\w)(?:đã\s*)?(?:vào\s*lớp|đến\s*lớp|có\s*mặt|đã\s*đến)"
+    r"(?:\s*(?:rồi|rùi|r)(?!\w))?(?!\w)"
+)
 TOKEN_RE = re.compile(
     # Số trong ngoặc đứng trước status; "(3)" là số đếm, không phải trạng thái.
     r"(?P<paren_count>\(\s*(?P<paren_number>\d+)\s*\))"
@@ -46,6 +54,7 @@ TOKEN_RE = re.compile(
     r"|(?P<full>" + FULL_ATTENDANCE_PATTERN + r")"
     r"|(?P<absence>" + ABSENCE_PATTERN + r")"
     r"|(?P<late>" + LATE_PATTERN + r")"
+    r"|(?P<arrived>" + ARRIVED_PATTERN + r")"
     r"|(?P<group>(?<!\w)(?P<group_count>\d+)\s*(?P<group_kind>[PK])(?:\s*[:=])?(?!\w))"
     r"|(?P<group_phrase>(?<!\w)(?P<phrase_kind>"
     r"không\s*phép|khong\s*phep|ko\s*phép|ko\s*phep|k\s*phép|k\s*phep|kp|"
@@ -104,6 +113,7 @@ def _parse_block(code: str, raw: str, body: str) -> dict:
     # Tách "vắng2"/"v0" trước khi quét số: lookbehind của token số vẫn
     # nhìn ký tự gốc dù token từ khóa đã được tiêu thụ.
     body = re.sub(ABSENCE_PATTERN, lambda match: match[0] + " ", body, flags=re.I)
+    body = FILLER_RE.sub(" ", body)
     group_index = None
     late_mode = False
     awaiting_total = False
@@ -120,6 +130,9 @@ def _parse_block(code: str, raw: str, body: str) -> dict:
             return
         if not has_status and is_courtesy(fragment):
             return
+        tail = None if has_status else TRAILING_STATUS_RE.search(fragment)
+        if tail:
+            fragment, explicit_status, has_status = fragment[:tail.start()], tail[1].upper(), True
         name = normalize_name(fragment)
         if not NAME_RE.fullmatch(name):
             record["unrecognized"].append(fragment)
@@ -129,7 +142,7 @@ def _parse_block(code: str, raw: str, body: str) -> dict:
             record["excluded_late"].append(name)
             return
         inherited = record["groups"][group_index]["loai"] if group_index is not None else None
-        record["hoc_sinh"].append({"ten": name, "loai": explicit_status if has_status else inherited})
+        record["hoc_sinh"].append({"ten": name, "loai": explicit_status if has_status else inherited or "K"})  # không ghi P/K = không phép
         if has_status and explicit_status is None and raw_status and raw_status.strip() != "?":
             record["parse_notes"].append(f"Trạng thái ({raw_status.strip()}) của {name} chưa rõ; cần kiểm tra.")
         if group_index is not None:
@@ -152,6 +165,15 @@ def _parse_block(code: str, raw: str, body: str) -> dict:
             late_mode = False
             awaiting_total = True
             group_index = None
+        elif token["arrived"]:
+            # "X vào lớp rồi": X không vắng; bỏ khỏi danh sách nếu đã ghi nhầm.
+            name = normalize_name(pending.strip(TRIM)) if pending.strip(TRIM) else None
+            pending = ""
+            if name:
+                kept = [s for s in record["hoc_sinh"] if s["ten"] != name]
+                if len(kept) == len(record["hoc_sinh"]):
+                    record["excluded_late"].append(name)
+                record["hoc_sinh"] = kept
         elif token["late"]:
             flush()
             late_mode = True

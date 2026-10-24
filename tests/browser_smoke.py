@@ -42,7 +42,7 @@ def run():
         copied = page.evaluate("navigator.clipboard.readText()")
         assert copied.replace("\r\n", "\n") == page.locator("#output-text").input_value()
         original = page.locator("#output-text").input_value()
-        page.locator("#output-text").fill(original.replace("Phương Thảo (?)", "Phương Thảo (P)"))
+        page.locator("#output-text").fill(original.replace("Phương Thảo (K)", "Phương Thảo (P)"))
         expect(page.locator("#edit-status")).to_have_text("Đã kiểm tra lại bản chỉnh sửa")
         assert "Chưa rõ P/K: Phương Thảo" not in page.locator("#warning-list").inner_text()
         with page.expect_download() as download_info:
@@ -94,7 +94,7 @@ def run():
         expect(page.locator("#stat-classes")).to_have_text("25/26")
         expect(page.locator("#stat-absent")).to_have_text("18")
         assert "12C6 Vắng  0" in page.locator("#output-text").input_value()
-        assert "11C1 Vắng  2 Tấn Phát (?), Nhật Uy (?)" in page.locator("#output-text").input_value()
+        assert "11C1 Vắng  2 Tấn Phát (K), Nhật Uy (K)" in page.locator("#output-text").input_value()
         assert "Quang Vinh" not in page.locator("#output-text").input_value()
         assert "Quang Vinh" not in page.locator("#warning-list").inner_text()
         page.get_by_role("button", name="Xóa nội dung").click()

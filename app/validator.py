@@ -42,7 +42,7 @@ def validate(data: dict, configured_classes: list[str]) -> dict:
             warn("missing", "Chưa báo.", code)
         elif not count and declared is None and not record.get("excluded_late"):
             warn("no_information", "Có mã lớp nhưng chưa có thông tin vắng.", code)
-        if code not in classes:
+        if classes and code not in classes:
             warn("unknown_class", "Mã lớp không có trong config.json; kiểm tra lại.", code)
         if declared is not None and declared != count:
             warn("count_mismatch", f"Khai báo {declared} vắng nhưng liệt kê {count} tên.", code)

@@ -22,7 +22,7 @@ def test_attached_class_and_absence_marker(text):
 
 def test_abbreviated_student_name():
     record = parse_message("12c7 v1 h.l bảo ngọc")["lop"][0]
-    assert record["hoc_sinh"] == [{"ten": "H.L Bảo Ngọc", "loai": None}]
+    assert record["hoc_sinh"] == [{"ten": "H.L Bảo Ngọc", "loai": "K"}]
 
 
 @pytest.mark.parametrize("status", ["T", "t", "T 1t", "T 2t", "T2t", "trễ", "đi trễ", "muộn"])
@@ -83,7 +83,7 @@ def test_chat_header_only_drops_sender_and_timestamp():
 def test_numbered_names_and_parenthesized_absence_totals():
     data = parse_message("Lớp 11c1 vắng2 1 tấn phát 2. Nhật uy\n12c18 vắng (1) Nguyễn Phan Đăng Khoa (k)")
     assert data["lop"][0]["so_vang_khai_bao"] == 2
-    assert data["lop"][0]["hoc_sinh"] == [{"ten":"Tấn Phát","loai":None},{"ten":"Nhật Uy","loai":None}]
+    assert data["lop"][0]["hoc_sinh"] == [{"ten":"Tấn Phát","loai":"K"},{"ten":"Nhật Uy","loai":"K"}]
     assert data["lop"][1]["hoc_sinh"] == [{"ten":"Nguyễn Phan Đăng Khoa","loai":"K"}]
     assert data["lop"][1]["so_vang_khai_bao"] == 1
 
@@ -135,13 +135,13 @@ def test_full_pasted_history_last_report_wins():
     records = {r["ten_lop"]: r for r in data["lop"]}
     expected = {
         "10C3": [], "10C4": [], "10C5": [("Quang Thang","K")], "10C8": [], "10C10": [],
-        "11C1": [("Tấn Phát",None),("Nhật Uy",None)],
+        "11C1": [("Tấn Phát","K"),("Nhật Uy","K")],
         "12C1": [], "12C2": [("Phan Quốc Việt","P")], "12C3": [("Ngọc Duy","P")], "12C4": [],
         "12C5": [("Vũ Duy Phong","P"),("Nguyễn Như Bảo Nam","P")], "12C6": [], "12C7": [], "12C8": [],
         "12C9": [("Duy Hải","K"),("Ngọc Đạt","K"),("Tuấn Huy","P")],
-        "12C10": [("Nguyễn Văn Đức","P")], "12C11": [("Khánh Uyên",None),("Ngô Ngọc",None)],
-        "12C12": [("Trần Nguyễn Minh Anh",None),("Lê Thị Ngọc Huyền",None)], "12C13": [("Quốc Đại","P")],
-        "12C14": [], "12C15": [], "12C16": [("Huỳnh Tấn Tài","K")], "12C17": [("Trúc Vy",None)],
+        "12C10": [("Nguyễn Văn Đức","P")], "12C11": [("Khánh Uyên","K"),("Ngô Ngọc","K")],
+        "12C12": [("Trần Nguyễn Minh Anh","K"),("Lê Thị Ngọc Huyền","K")], "12C13": [("Quốc Đại","P")],
+        "12C14": [], "12C15": [], "12C16": [("Huỳnh Tấn Tài","K")], "12C17": [("Trúc Vy","K")],
         "12C18": [], "12C19": [],
     }
     assert set(records) == set(expected)
@@ -154,3 +154,13 @@ def test_full_pasted_history_last_report_wins():
     assert records["12C14"]["excluded_late"] == ["Quang Vinh"]
     assert records["12C9"]["overwritten"] > 1
     assert data["unrecognized"] == ['đoạn này chỉ lấy lớp và văn "']
+
+
+def test_filler_trailing_status_and_arrival():
+    text = ("11c7 vắng 1 Thiện Thuận K ạ\nNguyễn Trung Kiên vào lớp r ạ\n"
+            "Lớp 11c1 vắng1 1. Tấn phát\nLớp 11c4 vắng 1 bạn ạ. Gia Vỹ")
+    records = {r["ten_lop"]: r for r in parse_message(text)["lop"]}
+    assert records["11C7"]["hoc_sinh"] == [{"ten": "Thiện Thuận", "loai": "K"}]
+    assert records["11C7"]["so_vang_khai_bao"] == 1
+    assert records["11C1"]["hoc_sinh"] == [{"ten": "Tấn Phát", "loai": "K"}]
+    assert records["11C4"]["hoc_sinh"] == [{"ten": "Gia Vỹ", "loai": "K"}]
