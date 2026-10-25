@@ -1,0 +1,1 @@
+nếu % của số đó nhỏ thì highlight 
