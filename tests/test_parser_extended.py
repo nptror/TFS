@@ -172,3 +172,32 @@ def test_missing_status_defaults_to_k_with_warning():
     assert [s["loai"] for s in data["lop"][0]["hoc_sinh"]] == ["K", "K"]
     assert [(w["class_name"], w["code"]) for w in warnings] == [("11C1", "default_k")]
     assert warnings[0]["message"] == "Không ghi P/K, mặc định K: Tấn Phát, Nhật Uy."
+
+
+def test_full_class_supplement_and_trailing_status():
+    text = ("[28/10/2026 13:18:20] Duy Nguyễn: 10C8 vắng Tấn Hậu (P) hồng quân (P)\n"
+            "[28/10/2026 13:51:29] Đồng Quốc: 10C5 lớp đủ\n"
+            "[28/10/2026 14:57:21] Tuấn Thương: Lớp 10c4 vắng nam , tài , đăng có phép hết ạ\n"
+            "[28/10/2026 15:12:04] Duy Nguyễn: 10C8 bổ sung vắng minh quân (K)\n"
+            "[28/10/2026 17:29:39] Xuân Hoa: 10c3 vắng không phép: trọng tú")
+    result = validate(parse_message(text), [])
+    records = {r["ten_lop"]: r for r in result["data"]["lop"]}
+    status = lambda code: [(s["ten"], s["loai"]) for s in records[code]["hoc_sinh"]]
+    assert status("10C8") == [("Tấn Hậu", "P"), ("Hồng Quân", "P"), ("Minh Quân", "K")]
+    assert status("10C5") == [] and records["10C5"]["so_vang_khai_bao"] == 0
+    assert status("10C4") == [("Nam", "P"), ("Tài", "P"), ("Đăng", "P")]
+    assert status("10C3") == [("Trọng Tú", "K")]
+    assert result["warnings"] == []
+
+
+@pytest.mark.parametrize("text", [
+    "10c1 vắng K: nguyễn văn a, trần thị c\nP: nguyễn văn b",
+    "10c1 vắng\nK: nguyễn văn a, trần thị c\nP: nguyễn văn b,...",
+    "10c1 vắng k: nguyễn văn a; trần thị c;.... p= nguyễn văn b",
+])
+def test_status_labels_without_count(text):
+    result = validate(parse_message(text), [])
+    record = result["data"]["lop"][0]
+    assert [(s["ten"], s["loai"]) for s in record["hoc_sinh"]] == [
+        ("Nguyễn Văn A", "K"), ("Trần Thị C", "K"), ("Nguyễn Văn B", "P")]
+    assert result["warnings"] == []

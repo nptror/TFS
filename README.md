@@ -76,7 +76,7 @@ bạn dán vào được báo cáo, không thêm lớp thiếu và không cảnh
 - Mỗi mã lớp mở một khối đến mã lớp kế tiếp, kể cả nhiều dòng.
 - Nhận `vắng`, `văng`, `vang`; tách `sĩ số40`, `sĩ số 40`, `si so 40`, `ss 40`.
 - Nhận `vắng2`, `vắng0`, `v3`, `v 1`, `v:0`, `vắng (3)`; `đủ`, `đi đủ`,
-  `đủ ạ` được hiểu là 0 vắng. Không xóa các từ giống từ khóa nằm trong họ tên.
+  `đủ ạ`, `lớp đủ` được hiểu là 0 vắng. Không xóa các từ giống từ khóa nằm trong họ tên.
 - Tách số thứ tự khỏi tổng khai báo: `11c1 vắng2 1 tấn phát 2. Nhật uy`
   thành hai tên Tấn Phát và Nhật Uy, đều mặc định K nếu không ghi P/K.
 - Tách tên theo dấu phẩy, chấm phẩy, xuống dòng hoặc ngay sau `(P)/(K)/(?)`.
@@ -84,13 +84,17 @@ bạn dán vào được báo cáo, không thêm lớp thiếu và không cảnh
   hơn trạng thái nhóm. `(?)` giữ trạng thái chưa rõ, kể cả trong nhóm P/K.
 - Nhận nhóm viết đầy đủ: `Vắng không phép: (6) ...` hoặc `Vắng có phép: ...`.
   Có thể bỏ số đếm nhóm; ứng dụng chỉ đối chiếu số đếm khi thực sự được khai báo.
+- Nhận nhãn ngắn `K: a, b` / `P: c` (bắt buộc có `:` hoặc `=`), cùng dòng hoặc xuống dòng.
+  Dấu `...` cuối danh sách được bỏ qua.
+- `có phép hết`, `không phép cả` đứng sau danh sách tên áp cho các tên chưa ghi P/K trước đó.
 - Phần `Trễ: (2) ...`, `trễ 1 ...` và các tên có `(T)`, `(t)`, `(T 1t)`,
   `(T 2t)`, `(trễ)`, `(muộn)` được bỏ qua hoàn toàn khi xuất báo cáo:
   không nằm trong danh sách vắng, không hiện trong cảnh báo hay Ghi chú Excel.
   Nếu khai báo `Vắng 2` nhưng cả hai tên đều `(T)`, kết quả là 0 vắng kèm cảnh báo
   chênh số; không tự chuyển T thành K. Ký hiệu lạ như `(X)` vẫn giữ tên với `(?)`
   và cảnh báo ký hiệu gốc.
-- Lớp trùng lấy lần cuối, kèm cảnh báo đã ghi đè.
+- Lớp trùng lấy lần cuối, kèm cảnh báo đã ghi đè. Riêng tin `10C8 bổ sung vắng ...`
+  (`bổ sung`, `bs`, `thêm` ngay sau mã lớp) được cộng thêm vào lần báo trước.
   “Lần cuối” là thứ tự trong nội dung dán, không phải thời gian trong dấu ngoặc.
   Khi dán lịch sử nhiều ngày, ứng dụng không tự lọc ngày hoặc sắp xếp lại tin nhắn.
 - Khi có tên, số vắng đầu ra bằng số tên. Nếu số khai báo khác số tên, cảnh báo

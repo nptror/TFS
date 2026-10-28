@@ -22,7 +22,7 @@ ABSENCE_PATTERN = (
     r"vắng|văng|vang|vắg|vg|v)(?![^\W\d_])\s*[:=]?\s*"
 )
 FULL_ATTENDANCE_PATTERN = (
-    r"(?:^|(?<=\n))[ \t:=-]*(?:"
+    r"(?:^|(?<=\n))[ \t:=-]*(?:lớp\s*)?(?:"
     r"đi\s*đủ|di\s*du|đầy\s*đủ|day\s*du|có\s*mặt\s*đủ|hiện\s*diện\s*đủ|"
     r"đủ\s*(?:sĩ\s*số|ss)|(?:sĩ\s*số|ss)\s*đủ|"
     r"không\s*ai\s*vắng|không\s*vắng|ko\s*vắng|k\s*vắng|khong\s*vang|đủ|du"
@@ -55,11 +55,13 @@ TOKEN_RE = re.compile(
     r"|(?P<absence>" + ABSENCE_PATTERN + r")"
     r"|(?P<late>" + LATE_PATTERN + r")"
     r"|(?P<arrived>" + ARRIVED_PATTERN + r")"
-    r"|(?P<group>(?<!\w)(?P<group_count>\d+)\s*(?P<group_kind>[PK])(?:\s*[:=])?(?!\w))"
+    r"|(?P<group>(?<!\w)(?:(?P<group_count>\d+)\s*(?P<group_kind>[PK])(?:\s*[:=])?(?!\w)"
+    r"|(?P<label_kind>[PK])\s*[:=]))"
     r"|(?P<group_phrase>(?<!\w)(?P<phrase_kind>"
     r"không\s*phép|khong\s*phep|ko\s*phép|ko\s*phep|k\s*phép|k\s*phep|kp|"
     r"có\s*phép|co\s*phep|c\s*phép|cp)(?!\w)[ \t]*[:=]?[ \t]*"
-    r"(?:\(\s*(?P<phrase_count1>\d+)\s*\)|(?P<phrase_count2>\d+)(?![\w]))?)"
+    r"(?:\(\s*(?P<phrase_count1>\d+)\s*\)|(?P<phrase_count2>\d+)(?![\w]))?"
+    r"(?P<phrase_all>(?<!\w)(?:hết|cả|tất\s*cả|toàn\s*bộ)(?!\w))?)"
     r"|(?P<number_token>(?<!\w)(?P<number>\d+)(?!\w)(?P<ordinal>[.)/\-])?)"
     r"|(?P<separator>[,;\n]+)",
     re.I,
@@ -67,6 +69,7 @@ TOKEN_RE = re.compile(
 # Dấu chấm giữa chữ cho tên viết tắt như "h.l bảo ngọc"; không tự mở rộng họ tên.
 NAME_RE = re.compile(r"[^\W\d_]+\.?(?:[\s'’.\-]+[^\W\d_]+\.?)*", re.UNICODE)
 META_LINE_RE = re.compile(r"^\s*(?:đoạn này|đây là dữ liệu|dữ liệu mới|chỉ lấy lớp)\b", re.I)
+SUPPLEMENT_RE = re.compile(r"^[\s:,.\-]*(?:bổ\s*sung|bo\s*sung|bs|thêm)(?!\w)", re.I)
 TRIM = " \t\r\n:=-•–—\"'“”‘’"
 COURTESY_WORDS = {
     "ạ", "a", "dạ", "da", "dạ em gửi", "dạ gửi", "em gửi", "gửi ạ", "gửi",
@@ -104,6 +107,9 @@ def _parse_block(code: str, raw: str, body: str) -> dict:
         "overwritten": 0, "groups": [], "unrecognized": [], "parse_notes": [],
         "excluded_late": [], "defaulted_k": [],
     }
+    body, supplement = SUPPLEMENT_RE.subn("", body)
+    if supplement:
+        record["supplement"] = True
     sizes = SIZE_RE.findall(body)
     if sizes:
         record["si_so"] = int(sizes[-1])
@@ -124,7 +130,7 @@ def _parse_block(code: str, raw: str, body: str) -> dict:
         nonlocal pending, awaiting_total
         fragment = pending.strip(TRIM)
         pending = ""
-        if not fragment:
+        if not fragment.strip(".…"):
             if has_status:
                 record["unrecognized"].append(f"({raw_status or '?'}) không có tên")
             return
@@ -180,10 +186,19 @@ def _parse_block(code: str, raw: str, body: str) -> dict:
             flush()
             late_mode = True
             group_index = None
+        elif token["group_phrase"] and (token["phrase_all"] or not body[token.end():].strip(TRIM + ".!")):
+            # "Nam, Tài, Đăng có phép hết": trạng thái đứng sau áp cho các tên chưa ghi P/K trước đó.
+            flush()
+            kind = "K" if token["phrase_kind"].lower().startswith("k") else "P"
+            for student in record["hoc_sinh"]:
+                if student["ten"] in record["defaulted_k"]:
+                    student["loai"] = kind
+            record["defaulted_k"] = []
         elif token["group"] or token["group_phrase"]:
             flush()
             if token["group"]:
-                kind, count = token["group_kind"].upper(), int(token["group_count"])
+                kind = (token["group_kind"] or token["label_kind"]).upper()
+                count = int(token["group_count"]) if token["group_count"] else None
             else:
                 kind = "K" if token["phrase_kind"].lower().startswith("k") else "P"
                 count_text = token["phrase_count1"] or token["phrase_count2"]
@@ -220,13 +235,30 @@ def _parse_block(code: str, raw: str, body: str) -> dict:
     return record
 
 
+def _merge(previous: dict, extra: dict) -> dict:
+    """Tin "bổ sung" cộng thêm học sinh vào lần báo trước của cùng lớp."""
+    merged = {**previous, "raw": previous["raw"] + "\n" + extra["raw"]}
+    for key in ("hoc_sinh", "groups", "unrecognized", "parse_notes", "excluded_late", "defaulted_k"):
+        merged[key] = previous.get(key, []) + extra.get(key, [])
+    if previous["so_vang_khai_bao"] is not None or extra["so_vang_khai_bao"] is not None:
+        # Phần nào không khai báo số thì lấy số tên của phần đó.
+        merged["so_vang_khai_bao"] = sum(
+            len(part["hoc_sinh"]) if part["so_vang_khai_bao"] is None else part["so_vang_khai_bao"]
+            for part in (previous, extra))
+    merged["si_so"] = extra["si_so"] if extra["si_so"] is not None else previous["si_so"]
+    return merged
+
+
 def deduplicate(records: list[dict]) -> list[dict]:
-    """Cả JSON từ AI lẫn parser đều dùng quy tắc lần báo cuối cùng thắng."""
+    """Lần báo cuối cùng thắng; tin "bổ sung" thì gộp thêm vào lần trước."""
     latest = {}
     for record in records:
         code = normalize_class(record["ten_lop"])
         record = {**record, "ten_lop": code}
-        if code in latest:
+        supplement = record.pop("supplement", False)
+        if code in latest and supplement:
+            record = _merge(latest[code], record)
+        elif code in latest:
             record["overwritten"] = latest[code].get("overwritten", 0) + 1
         latest[code] = record
     return list(latest.values())
