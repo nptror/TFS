@@ -50,6 +50,35 @@ không cần Internet sau khi cài thư viện.
 cáo đã soạn, lần mở lại giữ ngày cũ của bản nháp; nếu chưa có báo cáo thì dùng hôm nay.
 **Xóa nội dung** xóa text và báo cáo đang làm.
 
+## Nhập điểm từ phiếu scan (`/nhapdiem`)
+
+Trang **http://127.0.0.1:8000/nhapdiem**: tải Excel danh sách (cột điểm còn trống) và PDF
+phiếu điểm viết tay → kiểm tra các dòng ⚠ → tải Excel đã có điểm. Lõi OCR nằm trong `app/ocr/`.
+
+Cài thêm (không bắt buộc cho trang báo vắng):
+
+1. Thư viện Python: `pip install -r requirements-nhapdiem.txt`
+   (OpenCV phải là bản 4.x; bản 5 đã bỏ HOG mà mô hình chữ số cần).
+2. Chương trình **Tesseract OCR** để đọc họ tên, ngày sinh in sẵn:
+   - Windows: bộ cài UB Mannheim — https://github.com/UB-Mannheim/tesseract/wiki
+     (cài vào thư mục mặc định; tick **Vietnamese** để đọc tên có dấu).
+   - Ubuntu/Docker: `apt install tesseract-ocr tesseract-ocr-vie`.
+
+Chưa cài thì trang vẫn mở nhưng báo lỗi rõ ràng khi bấm Đọc. Render (bản Python thường)
+không có Tesseract; muốn chạy trang này trên Render cần deploy bằng Docker.
+
+- Ghép học sinh theo họ tên (bỏ dấu, so gần đúng) + ngày sinh + lớp; không dùng SBD.
+- Dòng ⚠: điểm chưa chắc (< 0.85), không đọc được, vắng/trống, tên chưa chắc, ô Excel đã có điểm.
+  Điểm viết tay đọc đúng khoảng 87%, nên **luôn duyệt các dòng ⚠ trước khi xuất**.
+- **Xem trước** trước khi tải: bảng cột điểm sau khi ghi (điểm mới, điểm ghi đè, học sinh
+  chưa có điểm) và phiếu scan bên cạnh; bấm số trang để mở đúng trang phiếu.
+- Một học sinh bị ghép 2 lần thì không cho xuất. Dòng không chọn học sinh hoặc để trống điểm
+  sẽ không được ghi. File xuất giữ nguyên công thức và dữ liệu khác.
+- Giới hạn: Excel 10 MB, PDF 40 MB, tối đa 30 trang mỗi lần. File `.xls` cũ cần LibreOffice
+  để tự chuyển, hoặc lưu lại thành `.xlsx`.
+- Mô hình chữ số dùng mẫu có sẵn trong `app/ocr/du_lieu_hoc/digits.npz`; trang web không tự học thêm
+  nét chữ từ các điểm đã duyệt.
+
 ## Danh sách lớp
 
 Sửa `config.json` để cập nhật các lớp cần báo:
@@ -201,18 +230,6 @@ Bao gồm từng lớp trong dữ liệu mẫu, khoảng trắng/dấu tiếng V
 nhóm/riêng, lớp trùng, thiếu thông tin, sắp xếp số, Chủ nhật, API và đọc ngược file
 Excel để kiểm tra nội dung, màu nền, gộp ô và số liệu sau khi sửa tay.
 
-Kiểm thử giao diện bổ sung (không bắt buộc để chạy app), dùng Chrome đã cài:
-
-```bash
-pip install playwright
-uvicorn app.main:app --port 8765
-# Chạy ở terminal thứ hai:
-python tests/browser_smoke.py
-```
-
-Script kiểm tra desktop/mobile, phím tắt, sửa kết quả, tải Excel và lưu nháp;
-ảnh chụp kiểm tra được lưu trong `.tools/browser/` (đã bỏ qua trong Git).
-
 ## Cấu trúc
 
 ```text
@@ -224,14 +241,18 @@ app/
   validator.py         # Cảnh báo, lớp thiếu, sắp xếp
   formatter.py         # Dữ liệu -> text, đọc tiêu đề
   excel_export.py      # openpyxl -> file trong bộ nhớ
+  nhapdiem.py          # Router /nhapdiem
+  ocr/                 # Tách bảng, đọc chữ in (Tesseract), mô hình chữ số viết tay
   static/index.html    # Toàn bộ HTML, CSS, JavaScript thuần
+  static/nhapdiem.html # Trang nhập điểm
 tests/
   conftest.py
   test_parser.py
   test_api.py
-  browser_smoke.py
+  test_nhapdiem.py     # Bỏ qua nếu chưa cài requirements-nhapdiem.txt
 config.json
 requirements.txt
+requirements-nhapdiem.txt
 pytest.ini
 README.md
 ```

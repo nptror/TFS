@@ -4,6 +4,4 @@ __pycache__/
 .env
 *.py[cod]
 *.xlsx
-test-results/
-.tools/
 
