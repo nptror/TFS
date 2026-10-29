@@ -10,7 +10,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import ValidationError
 
-from . import nhapdiem
 from .excel_export import export_excel, export_filename
 from .formatter import format_text, split_report_header
 from .models import ExportRequest, ParsedReport, normalize_class
@@ -21,13 +20,10 @@ from .validator import absence_count, validate
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = ROOT / "config.json"
 app = FastAPI(title="Tổng hợp báo vắng", version="1.0.0")
-app.include_router(nhapdiem.router)
 
 
 @app.exception_handler(RequestValidationError)
 async def request_validation_error(request, error):
-    if request.url.path.startswith("/api/nhapdiem"):
-        return JSONResponse(status_code=422, content={"detail": "Thiếu file Excel/PDF hoặc chưa chọn sheet và môn."})
     return JSONResponse(status_code=422, content={"detail":
         "Dữ liệu chưa hợp lệ. Kiểm tra buổi, ngày, ca (1–99) và độ dài nội dung."})
 
